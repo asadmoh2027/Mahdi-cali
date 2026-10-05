@@ -122,15 +122,32 @@ function doGet(e) {
             .build()
     }
 
-    // Official Central Google Drive Script Server for Mahdi Cali School
-    const val PERMANENT_CENTRAL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySg4iCJ0TVe-FuOVEA3IlRFG_yMS_5-sy4mMxinKsBemAKVXJFnU9XWpT2zoGGNlAK/exec"
+    // Official Permanent Central Google Drive Script Server for Mahdi Cali School
+    const val PERMANENT_CENTRAL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyD90Hjfuc5BlgagYSC62Uu9qTleujMNMOHr7DE0xsml9NG4NTLruTLLh1Gj1GfYBwv/exec"
 
     fun getScriptUrl(context: Context? = null): String {
+        if (context != null) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val custom = prefs.getString(KEY_SCRIPT_URL, null)
+            if (!custom.isNullOrBlank()) {
+                if (custom.contains("AKfycbySg4iCJ0TVe-FuOVEA3IlRFG_yMS_5-sy4mMxinKsBemAKVXJFnU9XWpT2zoGGNlAK")) {
+                    prefs.edit().putString(KEY_SCRIPT_URL, PERMANENT_CENTRAL_SCRIPT_URL).apply()
+                    return PERMANENT_CENTRAL_SCRIPT_URL
+                }
+                return custom
+            }
+        }
         return PERMANENT_CENTRAL_SCRIPT_URL
     }
 
     fun setScriptUrl(context: Context, url: String) {
-        // Locked: Permanent Central Server URL cannot be changed or deleted
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val trimmed = url.trim()
+        if (trimmed.isBlank() || trimmed.contains("AKfycbySg4iCJ0TVe-FuOVEA3IlRFG_yMS_5-sy4mMxinKsBemAKVXJFnU9XWpT2zoGGNlAK")) {
+            prefs.edit().putString(KEY_SCRIPT_URL, PERMANENT_CENTRAL_SCRIPT_URL).apply()
+        } else {
+            prefs.edit().putString(KEY_SCRIPT_URL, trimmed).apply()
+        }
     }
 
     fun getLastSyncTime(context: Context): String {

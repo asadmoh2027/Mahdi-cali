@@ -24,6 +24,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,8 +74,12 @@ fun BackupScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isOperating by remember { mutableStateOf(false) }
 
-    // Dialog state for Google Apps Script Config
+    // Dialog state for Google Apps Script Config & Admin Password Protection
     var showScriptConfigDialog by remember { mutableStateOf(false) }
+    var showAdminAuthDialog by remember { mutableStateOf(false) }
+    var adminPasswordInput by remember { mutableStateOf("") }
+    var adminPasswordError by remember { mutableStateOf<String?>(null) }
+    var passwordVisible by remember { mutableStateOf(false) }
     var scriptUrlInput by remember { mutableStateOf(viewModel?.getGoogleScriptUrl() ?: GoogleDriveSync.getScriptUrl(context)) }
 
     // Dialog state for Firebase Config
@@ -161,7 +169,7 @@ fun BackupScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showScriptConfigDialog = true }) {
+                    IconButton(onClick = { showAdminAuthDialog = true }) {
                         Icon(Icons.Default.CloudQueue, contentDescription = "Google Drive Script Settings", tint = Color.White)
                     }
                     IconButton(onClick = { showFirebaseConfigDialog = true }) {
@@ -241,7 +249,7 @@ fun BackupScreen(
                     backupRecords = backupRecords,
                     autoCloudSyncEnabled = autoCloudSyncEnabled,
                     onToggleAutoCloudSync = onToggleAutoCloudSync,
-                    onOpenScriptSettings = { showScriptConfigDialog = true },
+                    onOpenScriptSettings = { showAdminAuthDialog = true },
                     onSyncToScriptClick = {
                         isOperating = true
                         viewModel?.syncToGoogleDriveScript { success, msg ->
@@ -369,56 +377,207 @@ fun BackupScreen(
         }
     }
 
-    // Dialog: Google Drive Central Server Information (Permanent & Locked)
+    // Dialog: Admin Security Password Gate for Server URL (password: admin2536)
+    if (showAdminAuthDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAdminAuthDialog = false
+                adminPasswordInput = ""
+                adminPasswordError = null
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = TealPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Amniga Admin-ka (Server Config)", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TealDark)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Qaybtan waxa gali kara oo Server URL-ka wax ka beddeli kara Maamulaha (Admin) oo keliya. Fadlan geli furahaaga sirta ah.",
+                        fontSize = 12.sp,
+                        color = DarkText
+                    )
+
+                    OutlinedTextField(
+                        value = adminPasswordInput,
+                        onValueChange = {
+                            adminPasswordInput = it
+                            adminPasswordError = null
+                        },
+                        label = { Text("Furaha Sirta ah (Password)") },
+                        placeholder = { Text("Geli password-ka admin-ka") },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        isError = adminPasswordError != null,
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (passwordVisible) "Qari password" else "Muuji password"
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (adminPasswordError != null) {
+                        Text(
+                            text = adminPasswordError ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (adminPasswordInput.trim() == "admin2536") {
+                            showAdminAuthDialog = false
+                            adminPasswordInput = ""
+                            adminPasswordError = null
+                            showScriptConfigDialog = true
+                        } else {
+                            adminPasswordError = "❌ Furaha sirta ah waa khalad! Fadlan hubi password-kaaga."
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
+                ) {
+                    Text("Xaqiiji & Gal")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAdminAuthDialog = false
+                        adminPasswordInput = ""
+                        adminPasswordError = null
+                    }
+                ) {
+                    Text("Ka Noqo")
+                }
+            }
+        )
+    }
+
+    // Dialog: Google Drive Central Server Configuration (Editable & Secure)
     if (showScriptConfigDialog) {
+        val clipboard = LocalClipboardManager.current
+        var currentUrlInput by remember { mutableStateOf(scriptUrlInput) }
+        var copySuccess by remember { mutableStateOf(false) }
+
         AlertDialog(
             onDismissRequest = { showScriptConfigDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudDone, contentDescription = null, tint = Color(0xFF10B981))
+                    Icon(Icons.Default.CloudSync, contentDescription = null, tint = Color(0xFF1E88E5))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("☁️ Central Google Drive Server", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TealPrimary)
+                    Text("⚙️ Google Drive Server URL", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TealPrimary)
                 }
             },
             text = {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 380.dp)
+                        .heightIn(max = 420.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Surface(
-                        color = TealContainer,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        "Geli Google Apps Script Web App URL-ka gaarka u ah Mahdi Cali School si xogta loogu kaydiyo Google Drive-kaaga rasmiga ah.",
+                        fontSize = 11.sp,
+                        color = DarkText
+                    )
+
+                    OutlinedTextField(
+                        value = currentUrlInput,
+                        onValueChange = { currentUrlInput = it },
+                        label = { Text("Web App URL (script.google.com)") },
+                        placeholder = { Text("https://script.google.com/macros/s/.../exec") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = {
+                            if (currentUrlInput.isNotBlank()) {
+                                IconButton(onClick = { currentUrlInput = "" }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                }
+                            }
+                        }
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Xaaladda Server-ka: 🟢 Si Joogto ah ugu Xiran", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TealDark)
-                            Text("Server-kan Google Drive wuxuu si rasmi ah ugu dhex jiraa dhismaha app-ka. Macallin kasta iyo qof kasta oo app-ka install gareeya xogta dugsigu si toos ah ayay ugu soo degaysaa iyadoon cidna laga doonayn inay URL qorto.", fontSize = 11.sp, color = DarkText)
+                        Button(
+                            onClick = {
+                                viewModel?.saveGoogleScriptUrl(currentUrlInput)
+                                scriptUrlInput = currentUrlInput
+                                statusMessage = "URL-ka server-ka si guul leh ayaa loo keydiyay!"
+                                showScriptConfigDialog = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Keydi URL-ka", fontSize = 12.sp)
+                        }
+
+                        if (currentUrlInput.isNotBlank()) {
+                            OutlinedButton(
+                                onClick = {
+                                    isOperating = true
+                                    viewModel?.testGoogleDriveScriptConnection { success, msg ->
+                                        isOperating = false
+                                        statusMessage = msg
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Tijaabi", fontSize = 12.sp)
+                            }
                         }
                     }
 
-                    Text("Faahfaahinta Server-ka Dugsiga:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp),
+                    HorizontalDivider()
+
+                    Text(
+                        "Sidee loo samaystaa URL cusub? (1 Daqiiqo):",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TealDark
+                    )
+
+                    Text(
+                        "1. Gal script.google.com adigoo ku jira akoonka Google ee dugsiga.\n" +
+                        "2. Riix 'New project', tirtir waxa ku jira, kuna dheji koodhkan hoose.\n" +
+                        "3. Riix 'Deploy' -> 'New deployment' -> Nooca: 'Web app'.\n" +
+                        "4. Execute as: 'Me' iyo Who has access: 'Anyone'.\n" +
+                        "5. Nuqul ka qaado Web app URL-ka, kor ku dheji oo Save dheh.",
+                        fontSize = 10.sp,
+                        color = DarkText
+                    )
+
+                    Button(
+                        onClick = {
+                            clipboard.setText(AnnotatedString(GoogleDriveSync.DEFAULT_SCRIPT_TEMPLATE))
+                            copySuccess = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (copySuccess) Color(0xFF10B981) else Color(0xFF1E88E5)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("• Meesha Xogta: Google Drive (Mahdi_Cali_School_Backups)", fontSize = 11.sp, color = DarkText)
-                            Text("• Helitaanka: Dhammaan Macallimiinta Dugsiga", fontSize = 11.sp, color = DarkText)
-                            Text("• URL: Joogto (Locked in App Code)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TealDark)
-                        }
+                        Icon(if (copySuccess) Icons.Default.Check else Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (copySuccess) "Waa La Koobiyay Koodhka! ✓" else "Koobiyi Koodhka Google Script-ka", fontSize = 11.sp)
                     }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = { showScriptConfigDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
-                ) {
-                    Text("Waad Ku Mahadsan Tahay")
+                TextButton(onClick = { showScriptConfigDialog = false }) {
+                    Text("Xir")
                 }
             }
         )
@@ -598,24 +757,39 @@ private fun GoogleDriveAndScriptTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("☁️ Dugsiga Central Google Drive", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E88E5))
+                            Text("☁️ Google Drive Server", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E88E5))
                         }
                         Surface(
-                            color = TealContainer,
+                            color = if (scriptUrl.isNotBlank()) TealContainer else MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = "Toos ugu Xiran 🟢",
+                                text = if (scriptUrl.isNotBlank()) "URL Diyaar Ah 🟢" else "Lama Galin URL ⚠️",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TealDark,
+                                color = if (scriptUrl.isNotBlank()) TealDark else MaterialTheme.colorScheme.error,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
                     }
 
-                    Text("Server-ka Google Drive ee Dugsiga si toos ah ayuu app-ka ugu dhex jiraa. Macallin kasta oo cusub oo app-ka soo dejiya xogta dugsiga si otomaatig ah ayay ugu soo degaysaa iyadoon wax URL ah loo baahnayn.", fontSize = 11.sp, color = DarkText)
-                    Text("Keydkii Google Drive: $lastDriveTime", fontSize = 11.sp, color = MutedText)
+                    Text(
+                        if (scriptUrl.isNotBlank()) "Server-ka Google Apps Script wuxuu si toos ah xogta ugu keydiyaa Google Drive-ka rasmiga ah ee dugsiga Mahdi Cali School."
+                        else "Server URL-ka dugsiga lama gelin weli. Fadlan guji badhanka hoose si aad u geliso ama u cusboonaysiiso URL-kaaga cusub ee Google Apps Script.",
+                        fontSize = 11.sp,
+                        color = DarkText
+                    )
+                    Text("Keydkii u dambeeyay: $lastDriveTime", fontSize = 11.sp, color = MutedText)
+
+                    OutlinedButton(
+                        onClick = onOpenScriptSettings,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (scriptUrl.isNotBlank()) "⚙️ Bedel ama Tijaabi Server URL-ka" else "⚙️ Geli Server URL-ka Cusub", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
 
                     HorizontalDivider()
 
