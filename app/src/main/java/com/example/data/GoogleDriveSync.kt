@@ -1,0 +1,356 @@
+package com.example.data
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.concurrent.TimeUnit
+
+object GoogleDriveSync {
+    val isDriveScriptConnected = MutableStateFlow(false)
+    val driveStatusMessage = MutableStateFlow("")
+    val lastDriveSyncTime = MutableStateFlow("")
+
+    private const val PREFS_NAME = "google_drive_sync_prefs"
+    private const val KEY_SCRIPT_URL = "script_webhook_url"
+    private const val KEY_LAST_SYNC_TIME = "last_drive_sync_time"
+
+    // Default sample/fallback Apps Script template URL or user's custom URL
+    const val DEFAULT_SCRIPT_TEMPLATE = """// ============================================================
+// Google Apps Script: School Management System Backup Engine
+// 1. Tag script.google.com -> Create New Project
+// 2. Tirtir koodka hore, ku dheji koodkan (Paste this code)
+// 3. Guji 'Deploy' -> 'New deployment' -> Select type: 'Web app'
+// 4. Description: 'School Backup'
+// 5. Execute as: 'Me' (Your Google Account)
+// 6. Who has access: 'Anyone' (Si app-ku ugu keydiyo)
+// 7. Guji 'Deploy' -> Copy 'Web app URL' -> Ku dheji App-ka
+// ============================================================
+
+function doPost(e) {
+  try {
+    var body = e.postData.contents;
+    var data = JSON.parse(body);
+    var folderName = "Mahdi_Cali_School_Backups";
+    var folders = DriveApp.getFoldersByName(folderName);
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+
+    if (data.action === "backup") {
+      var latestFiles = folder.getFilesByName("latest_backup.json");
+      var file;
+      if (latestFiles.hasNext()) {
+        file = latestFiles.next();
+        file.setContent(body);
+      } else {
+        file = folder.createFile("latest_backup.json", body, MimeType.PLAIN_TEXT);
+      }
+
+      // Permanent timestamped history
+      var dateStr = Utilities.formatDate(new Date(), "GMT+3", "yyyy-MM-dd_HH-mm-ss");
+      folder.createFile("backup_" + dateStr + ".json", body, MimeType.PLAIN_TEXT);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Xogta si buuxda ayaa loogu keydiyay Google Drive!",
+        fileId: file.getId(),
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    } 
+    else if (data.action === "get_latest") {
+      var files = folder.getFilesByName("latest_backup.json");
+      if (files.hasNext()) {
+        var content = files.next().getBlob().getDataAsString();
+        return ContentService.createTextOutput(content).setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "empty",
+        message: "Wax keyd ah lagama helin Google Drive."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "unknown_action" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    var folderName = "Mahdi_Cali_School_Backups";
+    var folders = DriveApp.getFoldersByName(folderName);
+    if (folders.hasNext()) {
+      var folder = folders.next();
+      var files = folder.getFilesByName("latest_backup.json");
+      if (files.hasNext()) {
+        var content = files.next().getBlob().getDataAsString();
+        return ContentService.createTextOutput(content).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "empty",
+      message: "No backup found in Google Drive folder yet."
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}"""
+
+    private val httpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(20, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
+
+    // Official Central Google Drive Script Server for Mahdi Cali School
+    const val PERMANENT_CENTRAL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySg4iCJ0TVe-FuOVEA3IlRFG_yMS_5-sy4mMxinKsBemAKVXJFnU9XWpT2zoGGNlAK/exec"
+
+    fun getScriptUrl(context: Context? = null): String {
+        return PERMANENT_CENTRAL_SCRIPT_URL
+    }
+
+    fun setScriptUrl(context: Context, url: String) {
+        // Locked: Permanent Central Server URL cannot be changed or deleted
+    }
+
+    fun getLastSyncTime(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_LAST_SYNC_TIME, "Lama xidhiidhin weli") ?: "Lama xidhiidhin weli"
+    }
+
+    fun setLastSyncTime(context: Context, timeStr: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_LAST_SYNC_TIME, timeStr).apply()
+        lastDriveSyncTime.value = timeStr
+    }
+
+    fun isNetworkAvailable(context: Context): Boolean {
+        return try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            val network = cm?.activeNetwork ?: return false
+            val cap = cm.getNetworkCapabilities(network) ?: return false
+            cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } catch (e: Exception) {
+            true
+        }
+    }
+
+    suspend fun uploadToGoogleDriveScript(
+        context: Context,
+        jsonPayload: String,
+        schoolName: String,
+        updatedBy: String
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val scriptUrl = getScriptUrl(context)
+        if (scriptUrl.isBlank()) {
+            return@withContext Result.failure(Exception("Fadlan marka hore geli Google Apps Script Web App URL-ka ee Settings-ka."))
+        }
+        if (!isNetworkAvailable(context)) {
+            return@withContext Result.failure(Exception("Ma jiro xiriir internet oo firfircoon."))
+        }
+
+        try {
+            val requestObject = JSONObject().apply {
+                put("action", "backup")
+                put("schoolId", "mahdi-cali")
+                put("schoolName", schoolName)
+                put("updatedBy", updatedBy)
+                put("timestamp", System.currentTimeMillis())
+                put("payload", jsonPayload)
+            }
+
+            val body = requestObject.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+            val request = Request.Builder()
+                .url(scriptUrl)
+                .post(body)
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            val finalUrl = response.request.url.toString()
+
+            if (response.code == 401 || finalUrl.contains("accounts.google.com") || finalUrl.contains("ServiceLogin")) {
+                isDriveScriptConnected.value = false
+                return@withContext Result.failure(
+                    Exception("Server HTTP Error: 401 (Fadlan script.google.com ka dooro 'Anyone' oo kaliya. Ha dooran 'Anyone with Google account' sababtoo ah taasi waxay keenaysaa ciladdan 401).")
+                )
+            }
+
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("Server HTTP Error: ${response.code}"))
+            }
+
+            val responseBody = response.body?.string() ?: ""
+            isDriveScriptConnected.value = true
+            val nowTime = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+            setLastSyncTime(context, nowTime)
+            driveStatusMessage.value = "Xogta si guul leh ayaa loogu keydiyay Google Drive!"
+
+            Result.success("✅ Xogta dugsiga si buuxda ayaa loogu keydiyay Google Drive Cloud Folder!\nTaariikhda: $nowTime")
+        } catch (e: Exception) {
+            isDriveScriptConnected.value = false
+            driveStatusMessage.value = "Cilad xiriir Google Drive: ${e.localizedMessage}"
+            Result.failure(Exception(e.localizedMessage ?: "Cilad aan la garanayn"))
+        }
+    }
+
+    suspend fun downloadFromGoogleDriveScript(context: Context): Result<Pair<String?, String?>> = withContext(Dispatchers.IO) {
+        val scriptUrl = getScriptUrl(context)
+        if (scriptUrl.isBlank()) {
+            return@withContext Result.failure(Exception("Fadlan marka hore geli Google Apps Script Web App URL-ka."))
+        }
+        if (!isNetworkAvailable(context)) {
+            return@withContext Result.failure(Exception("Ma jiro xiriir internet oo firfircoon."))
+        }
+
+        try {
+            val requestObject = JSONObject().apply {
+                put("action", "get_latest")
+                put("schoolId", "mahdi-cali")
+            }
+
+            val body = requestObject.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+            val request = Request.Builder()
+                .url(scriptUrl)
+                .post(body)
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            val finalUrl = response.request.url.toString()
+            if (response.code == 401 || finalUrl.contains("accounts.google.com") || finalUrl.contains("ServiceLogin")) {
+                isDriveScriptConnected.value = false
+                return@withContext Result.failure(
+                    Exception("Server HTTP Error: 401 (Script-ka Google wuxuu xiran yahay 'Only myself'. Fadlan script.google.com ka dhig 'Who has access: Anyone').")
+                )
+            }
+
+            if (!response.isSuccessful) {
+                // Also attempt simple GET if POST failed
+                val getRequest = Request.Builder().url(scriptUrl).get().build()
+                val getResponse = httpClient.newCall(getRequest).execute()
+                val getFinalUrl = getResponse.request.url.toString()
+                if (getResponse.code == 401 || getFinalUrl.contains("accounts.google.com") || getFinalUrl.contains("ServiceLogin")) {
+                    return@withContext Result.failure(
+                        Exception("Server HTTP Error: 401 (Fadlan script.google.com ka dooro 'Anyone' oo kaliya. Ha dooran 'Anyone with Google account').")
+                    )
+                }
+                if (!getResponse.isSuccessful) {
+                    return@withContext Result.failure(Exception("Server HTTP Error: ${response.code}"))
+                }
+                return@withContext parseResponsePayload(getResponse.body?.string() ?: "")
+            }
+
+            val responseBody = response.body?.string() ?: ""
+            parseResponsePayload(responseBody)
+        } catch (e: Exception) {
+            Result.failure(Exception(e.localizedMessage ?: "Cilad soo dejin Google Drive"))
+        }
+    }
+
+    private fun parseResponsePayload(responseBody: String): Result<Pair<String?, String?>> {
+        return try {
+            if (responseBody.isBlank()) {
+                return Result.success(Pair(null, null))
+            }
+            val json = JSONObject(responseBody)
+            if (json.optString("status") == "empty") {
+                return Result.success(Pair(null, null))
+            }
+
+            var payload: String? = null
+            var schoolName: String? = json.optString("schoolName", "Mahdi Cali School")
+
+            if (json.has("payload")) {
+                val p = json.get("payload")
+                payload = if (p is JSONObject || p is org.json.JSONArray) p.toString() else p.toString()
+            } else if (json.has("classes") || json.has("students")) {
+                payload = responseBody
+            }
+
+            Result.success(Pair(payload, schoolName))
+        } catch (e: Exception) {
+            // Check if response is raw backup JSON
+            if (responseBody.contains("\"classes\"") || responseBody.contains("\"students\"")) {
+                Result.success(Pair(responseBody, "Mahdi Cali School"))
+            } else {
+                Result.failure(Exception("Format khalad ah: ${e.localizedMessage}"))
+            }
+        }
+    }
+
+    suspend fun testScriptConnection(context: Context): Result<String> = withContext(Dispatchers.IO) {
+        val scriptUrl = getScriptUrl(context)
+        if (scriptUrl.isBlank()) {
+            return@withContext Result.failure(Exception("URL-ka Google Apps Script waa madhan yahay. Fadlan geli URL-ka Web App-ka."))
+        }
+        if (!isNetworkAvailable(context)) {
+            return@withContext Result.failure(Exception("Ma jiro xiriir internet."))
+        }
+
+        try {
+            val request = Request.Builder().url(scriptUrl).get().build()
+            val response = httpClient.newCall(request).execute()
+            val finalUrl = response.request.url.toString()
+            if (response.code == 401 || finalUrl.contains("accounts.google.com") || finalUrl.contains("ServiceLogin")) {
+                isDriveScriptConnected.value = false
+                return@withContext Result.failure(
+                    Exception("Server HTTP Error: 401 (Fadlan script.google.com ka dooro 'Anyone' oo kaliya. Ha dooran 'Anyone with Google account').")
+                )
+            }
+            if (response.isSuccessful) {
+                isDriveScriptConnected.value = true
+                Result.success("Google Drive Script Connected 🟢 (Code: ${response.code})")
+            } else {
+                Result.failure(Exception("Script HTTP Jawaab: ${response.code}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception(e.localizedMessage ?: "Lama xidhiidhi karo script-ka"))
+        }
+    }
+
+    // Direct File Stream Write for Storage Access Framework (SAF)
+    suspend fun writePayloadToStream(outputStream: OutputStream, jsonPayload: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            outputStream.use { os ->
+                os.write(jsonPayload.toByteArray(Charsets.UTF_8))
+                os.flush()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Direct File Stream Read for Storage Access Framework (SAF)
+    suspend fun readPayloadFromStream(inputStream: InputStream): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val jsonString = inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            if (jsonString.isBlank()) {
+                Result.failure(Exception("Faylku waa madhan yahay."))
+            } else {
+                Result.success(jsonString)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}

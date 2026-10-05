@@ -1,0 +1,196 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // AUTHENTICATION & ROLE HELPER FUNCTIONS
+    // ==========================================
+    
+    // Check if request is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get current user document from users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if user has specific role in custom claims or user document
+    function isRole(role) {
+      return isAuthenticated() && (
+        request.auth.token.role == role || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == role)
+      );
+    }
+
+    // Super Admin: Complete root access
+    function isSuperAdmin() {
+      return isRole('SUPER_ADMIN');
+    }
+
+    // Administrator: Full access to all school modules, data management, and restore
+    function isAdmin() {
+      return isSuperAdmin() || isRole('ADMIN') || isRole('SCHOOL_ADMIN');
+    }
+
+    // Teacher: Access to academic data, grading, and attendance
+    function isTeacher() {
+      return isRole('TEACHER');
+    }
+
+    // Cashier: Access to fees, payments, and financial records
+    function isCashier() {
+      return isRole('CASHIER') || isRole('STAFF');
+    }
+
+    // ==========================================
+    // 1. GLOBAL SCHOOLS & STRUCTURED SUBCOLLECTIONS
+    // ==========================================
+    match /schools/{schoolId} {
+      // Read allowed for app initialization and sync
+      allow read: if true;
+      allow write: if isAdmin() || (isAuthenticated() && (isTeacher() || isCashier()));
+
+      // 1.1 Academic Years
+      match /academicYears/{yearId} {
+        allow read: if true;
+        allow write: if isAdmin();
+
+        // 1.2 Classes
+        match /classes/{classId} {
+          allow read: if true;
+          allow write: if isAdmin();
+        }
+
+        // 1.3 Students
+        match /students/{studentId} {
+          allow read: if true;
+          allow create, update: if isAdmin() || isTeacher();
+          allow delete: if isAdmin();
+        }
+
+        // 1.4 Exams & Marks
+        match /exams/{examId} {
+          allow read: if true;
+          // Only Admin can delete or unlock finalized exam
+          allow create, update: if isAdmin() || isTeacher();
+          allow delete: if isAdmin();
+
+          match /marks/{markId} {
+            allow read: if true;
+            // Marks can only be entered if exam is not locked/finalized or user is Admin
+            allow create, update: if isAdmin() || isTeacher();
+            allow delete: if isAdmin();
+          }
+        }
+
+        // 1.5 Attendance
+        match /attendance/{attId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin() || isTeacher();
+        }
+
+        // 1.6 Fees
+        match /fees/{feeId} {
+          allow read: if isAdmin() || isCashier();
+          allow write: if isAdmin() || isCashier();
+        }
+      }
+
+      // 1.7 Student Class History (Promotion Records)
+      match /studentClassHistory/{historyId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin() || isTeacher();
+      }
+
+      // 1.8 Subjects
+      match /subjects/{subjectId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      // 1.9 Mark Change History (Audit trail of score changes)
+      match /markChangeHistory/{historyId} {
+        allow read: if isAdmin();
+        allow create: if isAuthenticated();
+        allow update, delete: if false; // Immutable!
+      }
+
+      // 1.10 Recycle Bin (Soft deleted items)
+      match /recycleBin/{itemId} {
+        allow read: if isAdmin();
+        allow create: if isAdmin() || isTeacher() || isCashier();
+        allow update, delete: if isAdmin();
+      }
+
+      // 1.11 Versioned Backups
+      match /backups/{backupId} {
+        allow read: if isAdmin();
+        allow write: if isAdmin();
+      }
+
+      // 1.12 Audit Logs (Immutable Security Trail)
+      match /auditLogs/{logId} {
+        allow read: if isAdmin();
+        allow create: if isAuthenticated();
+        allow update, delete: if false; // Cannot be altered or deleted
+      }
+
+      // 1.13 School Settings
+      match /settings/{settingId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // ==========================================
+    // 2. BACKWARD COMPATIBILITY ENDPOINTS
+    // ==========================================
+    match /classes_backup/{classDoc} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isAdmin() || request.auth.uid == userId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    match /classes/{classId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /exams/{examId} {
+      allow read: if true;
+      allow write: if isAdmin() || isTeacher();
+
+      match /marks/{markId} {
+        allow read: if true;
+        allow write: if isAdmin() || isTeacher();
+      }
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /fees/{feeId} {
+      allow read: if isAdmin() || isCashier();
+      allow write: if isAdmin() || isCashier();
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+  }
+}
