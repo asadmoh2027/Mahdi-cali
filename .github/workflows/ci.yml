@@ -1,0 +1,100 @@
+name: CI & Android Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-and-build:
+    name: Test, Build & Package APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Verify Java Environment
+        run: |
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '9.3.1'
+          cache-read-only: false
+
+      - name: Prepare Debug Keystore
+        run: |
+          if [ ! -f "./debug.keystore" ]; then
+            echo "Creating debug keystore for build verification..."
+            keytool -genkey -v -keystore ./debug.keystore \
+              -alias androiddebugkey \
+              -storepass android \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Run Unit & Robolectric Tests
+        run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+
+      - name: Build Debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Verify Output APK
+        run: |
+          APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "Error: Output APK not found at $APK_PATH"
+            find app/build/outputs/ -type f || true
+            exit 1
+          fi
+          echo "APK successfully generated. Size: $(du -h "$APK_PATH" | cut -f1)"
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mahdi-cali-school-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub Release (Push to main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_NAME="v1.0.${{ github.run_number }}"
+          RELEASE_TITLE="Mahdi Cali School - Build #${{ github.run_number }}"
+          ASSET_NAME="MahdiCaliSchool-Build-${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "/tmp/$ASSET_NAME"
+          
+          gh release create "$TAG_NAME" "/tmp/$ASSET_NAME" \
+            --title "$RELEASE_TITLE" \
+            --notes "Automated CI/CD build for Mahdi Cali School Android application. Commit: ${{ github.sha }}" \
+            --latest
