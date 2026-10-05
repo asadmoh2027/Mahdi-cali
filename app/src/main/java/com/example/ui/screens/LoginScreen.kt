@@ -1,10 +1,15 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -113,25 +118,25 @@ fun LoginScreen(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = TealContainer,
-                        shadowElevation = 3.dp,
+                        color = Color.White,
+                        shadowElevation = 4.dp,
                         modifier = Modifier
-                            .size(70.dp)
+                            .size(76.dp)
                             .padding(bottom = 4.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.School,
-                                contentDescription = "School Logo",
-                                tint = TealPrimary,
-                                modifier = Modifier.size(38.dp)
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.school_logo),
+                            contentDescription = "School Logo",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
                     }
 
                     Text(
-                        text = "SCHOOL MANAGEMENT SYSTEM",
-                        fontSize = 16.sp,
+                        text = "MAHDI CALI SCHOOL",
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Black,
                         color = TealDark,
                         textAlign = TextAlign.Center

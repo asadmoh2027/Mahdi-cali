@@ -67,16 +67,16 @@ fun WelcomeScreen(
                     shape = CircleShape,
                     color = Color.White,
                     shadowElevation = 8.dp,
-                    modifier = Modifier.size(96.dp)
+                    modifier = Modifier.size(108.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.School,
-                            contentDescription = "School Logo",
-                            tint = TealPrimary,
-                            modifier = Modifier.size(52.dp)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.school_logo),
+                        contentDescription = "School Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

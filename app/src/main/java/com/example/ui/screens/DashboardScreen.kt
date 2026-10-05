@@ -106,17 +106,17 @@ fun DashboardScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Surface(
                             shape = CircleShape,
-                            color = Color.White.copy(alpha = 0.2f),
-                            modifier = Modifier.size(34.dp)
+                            color = Color.White,
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.School,
-                                    contentDescription = "Logo",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                            Image(
+                                painter = painterResource(id = R.drawable.school_logo),
+                                contentDescription = "Logo",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
                         }
                         Column {
                             Text(
