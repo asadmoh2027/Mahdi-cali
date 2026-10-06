@@ -25,14 +25,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.data.*
 import com.example.ui.theme.*
 
@@ -46,6 +50,7 @@ fun StudentsScreen(
     exams: List<Exam> = emptyList(),
     marks: List<ExamMark> = emptyList(),
     attendance: List<AttendanceRecord> = emptyList(),
+    schoolName: String = "Mahdi Cali School",
     onAddStudentClick: () -> Unit,
     onBulkUploadClick: (Long, String, (Int, String) -> Unit) -> Unit,
     onDownloadSampleSheet: () -> Unit,
@@ -54,6 +59,7 @@ fun StudentsScreen(
     onExportStudentsListMarkCsv: (Long, String, String, Double) -> Unit = { _, _, _, _ -> },
     onDeleteStudentClick: (Long) -> Unit,
     onToggleFreeClick: (Long, Boolean) -> Unit = { _, _ -> },
+    onPrintStudentReport: (Student) -> Unit = {},
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -63,6 +69,7 @@ fun StudentsScreen(
     var showBulkDialog by remember { mutableStateOf(false) }
     var showListMarkDialog by remember { mutableStateOf(false) }
 
+    var selectedReportStudent by remember { mutableStateOf<Student?>(null) }
     var profileStudent by remember { mutableStateOf<Student?>(null) }
     var studentToDelete by remember { mutableStateOf<Student?>(null) }
 
@@ -398,11 +405,32 @@ fun StudentsScreen(
                                     )
                                 }
 
-                                // Icons Action Area: CALL & PROFILE
+                                // Icons Action Area: REPORT, CALL, DELETE & PROFILE
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // Student Comprehensive Report Icon Button (NEW!)
+                                    IconButton(
+                                        onClick = { selectedReportStudent = student },
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color(0xFF2563EB).copy(alpha = 0.15f),
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Assessment,
+                                                    contentDescription = "Warbixinta Guud ee Ardayga",
+                                                    tint = Color(0xFF1D4ED8),
+                                                    modifier = Modifier.size(19.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
                                     // Call Icon Button
                                     if (student.phone.isNotBlank()) {
                                         IconButton(
@@ -770,6 +798,23 @@ fun StudentsScreen(
             },
             onExportCsv = { classId, subject, examTitle, maxMarks ->
                 onExportStudentsListMarkCsv(classId, subject, examTitle, maxMarks)
+            }
+        )
+    }
+
+    // Student Comprehensive Report Dialog (Information, Exams, Attendance, Fees, Print)
+    if (selectedReportStudent != null) {
+        StudentComprehensiveReportDialog(
+            student = selectedReportStudent!!,
+            classes = classes,
+            fees = fees,
+            exams = exams,
+            marks = marks,
+            attendance = attendance,
+            schoolName = schoolName,
+            onDismiss = { selectedReportStudent = null },
+            onPrint = {
+                onPrintStudentReport(selectedReportStudent!!)
             }
         )
     }
@@ -1157,4 +1202,386 @@ private fun BulkUploadDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StudentComprehensiveReportDialog(
+    student: Student,
+    classes: List<SchoolClass>,
+    fees: List<FeeRecord>,
+    exams: List<Exam>,
+    marks: List<ExamMark>,
+    attendance: List<AttendanceRecord>,
+    schoolName: String,
+    onDismiss: () -> Unit,
+    onPrint: () -> Unit
+) {
+    val className = remember(classes, student.classId) {
+        classes.firstOrNull { it.id == student.classId }?.name ?: "Fasalka N/A"
+    }
+
+    // Filter student specific records
+    val studentMarks = remember(marks, student.id) {
+        marks.filter { it.studentId == student.id }
+    }
+    val studentAttendance = remember(attendance, student.id) {
+        attendance.filter { it.studentId == student.id }
+    }
+    val studentFees = remember(fees, student.id) {
+        fees.filter { it.studentId == student.id }
+    }
+
+    // Exam Metrics
+    val totalScore = studentMarks.sumOf { it.score }
+    val totalMax = studentMarks.sumOf { m ->
+        exams.firstOrNull { it.id == m.examId }?.totalMarks ?: 100.0
+    }
+    val averageScore = if (totalMax > 0) (totalScore / totalMax) * 100.0 else 0.0
+
+    // Attendance Metrics
+    val totalAtt = studentAttendance.size
+    val presentCount = studentAttendance.count { it.status == "Present" }
+    val absentCount = studentAttendance.count { it.status == "Absent" || it.status == "A" }
+    val lateCount = studentAttendance.count { it.status == "Late" || it.status == "Habsan" || it.status == "H" }
+    val attPercentage = if (totalAtt > 0) (presentCount.toDouble() / totalAtt) * 100 else 100.0
+
+    // Fee Metrics
+    val totalFeeAmount = studentFees.sumOf { it.amount }
+    val paidFeeAmount = studentFees.filter { it.paidStatus.equals("Paid", ignoreCase = true) }.sumOf { it.amount }
+    val pendingFeeAmount = totalFeeAmount - paidFeeAmount
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.92f)
+                .padding(vertical = 12.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Top Header Card
+                Surface(
+                    color = TealPrimary,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                schoolName.uppercase(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                            IconButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                modifier = Modifier.size(54.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        student.name.take(1).uppercase(),
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = TealPrimary
+                                    )
+                                }
+                            }
+
+                            Column {
+                                Text(
+                                    student.name,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    "ID: ${student.studentId} • $className",
+                                    fontSize = 13.sp,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Scrollable Content
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 1. GENERAL INFORMATION
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(18.dp))
+                                Text("1. XAALADDA GUUD (GENERAL INFO)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TealDark)
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Jinsiga:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(student.gender, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Hooyada:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(student.motherName.ifBlank { "N/A" }, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Taleefanka:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(student.phone.ifBlank { "N/A" }, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Xaaladda Waxbarasho:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(if (student.isFree) "Bilaash (Scholarship)" else "Caadi (Standard)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (student.isFree) Color(0xFFD97706) else Color(0xFF16A34A))
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. EXAM & ACADEMIC PERFORMANCE
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.School, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(18.dp))
+                                Text("2. NATIIJADA IMTIXAANAADKA (EXAMS)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TealDark)
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = TealLight.copy(alpha = 0.3f)
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("WADARTA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                        Text(String.format("%.1f / %.1f", totalScore, totalMax), fontSize = 13.sp, fontWeight = FontWeight.Black, color = TealDark)
+                                    }
+                                }
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (averageScore >= 50) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("CEL-CELIS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (averageScore >= 50) Color(0xFF15803D) else Color(0xFFB91C1C))
+                                        Text(String.format("%.1f%%", averageScore), fontSize = 13.sp, fontWeight = FontWeight.Black, color = if (averageScore >= 50) Color(0xFF15803D) else Color(0xFFB91C1C))
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            if (studentMarks.isEmpty()) {
+                                Text("Weli wax dhibco ah looma diiwaangelin ardaygan.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                studentMarks.take(6).forEach { mark ->
+                                    val ex = exams.firstOrNull { it.id == mark.examId }
+                                    val subName = ex?.subject?.ifBlank { ex.name } ?: "Exam #${mark.examId}"
+                                    val maxM = ex?.totalMarks ?: 100.0
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 3.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(subName, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            if (mark.isAbsent) "Maqnaa" else "${mark.score.toInt()} / ${maxM.toInt()}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (mark.isAbsent) Color.Red else TealDark
+                                        )
+                                    }
+                                }
+                                if (studentMarks.size > 6) {
+                                    Text("+ ${studentMarks.size - 6} imtixaan oo kale...", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. ATTENDANCE STATUS
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.EventAvailable, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(18.dp))
+                                Text("3. XAADIRINTA (ATTENDANCE)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TealDark)
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Joogay", fontSize = 10.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
+                                    Text("$presentCount", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFF16A34A))
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Maqnaa", fontSize = 10.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
+                                    Text("$absentCount", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFFDC2626))
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Habsan", fontSize = 10.sp, color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
+                                    Text("$lateCount", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFFD97706))
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Boqolkiiba", fontSize = 10.sp, color = TealDark, fontWeight = FontWeight.Bold)
+                                    Text(String.format("%.0f%%", attPercentage), fontSize = 15.sp, fontWeight = FontWeight.Black, color = TealDark)
+                                }
+                            }
+                        }
+                    }
+
+                    // 4. FEE PAYMENT SUMMARY
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.AttachMoney, contentDescription = null, tint = TealPrimary, modifier = Modifier.size(18.dp))
+                                Text("4. BIXINTA LACAGTA (FEES & PAYMENTS)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TealDark)
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            if (student.isFree) {
+                                Surface(
+                                    color = Color(0xFFFEF3C7),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFFD97706))
+                                        Text("Ardaygan waa bilaash (Free Scholarship) wax lacag ah lagama rabo.", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFB45309))
+                                    }
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text("Wadarta Lagu Yeeshay:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(String.format("$%.2f", totalFeeAmount), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Column {
+                                        Text("Bixiyay (Paid):", fontSize = 11.sp, color = Color(0xFF16A34A))
+                                        Text(String.format("$%.2f", paidFeeAmount), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
+                                    }
+                                    Column {
+                                        Text("Haraaga (Balance):", fontSize = 11.sp, color = if (pendingFeeAmount > 0) Color(0xFFDC2626) else Color(0xFF16A34A))
+                                        Text(String.format("$%.2f", pendingFeeAmount), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (pendingFeeAmount > 0) Color(0xFFDC2626) else Color(0xFF16A34A))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom Action Buttons
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shadowElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Xidh (Close)")
+                        }
+
+                        Button(
+                            onClick = onPrint,
+                            modifier = Modifier.weight(1.5f),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
+                        ) {
+                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("🖨️ Daabac Warbixinta", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

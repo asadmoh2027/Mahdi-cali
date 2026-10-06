@@ -2136,6 +2136,127 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         return java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss", java.util.Locale.US).format(java.util.Date())
     }
 
+    private var cachedLogoBase64: String? = null
+
+    fun getSchoolLogoBase64(context: Context): String {
+        cachedLogoBase64?.let { return it }
+        return try {
+            val bitmap = android.graphics.BitmapFactory.decodeResource(context.resources, com.example.R.drawable.school_logo)
+            if (bitmap != null) {
+                val stream = java.io.ByteArrayOutputStream()
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, stream)
+                val bytes = stream.toByteArray()
+                val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                cachedLogoBase64 = base64
+                base64
+            } else ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    fun getArtisticHeaderHtml(
+        context: Context,
+        schoolTitle: String,
+        reportTitle: String,
+        serialCode: String,
+        dateStr: String,
+        badgeText: String? = null
+    ): String {
+        val logoBase64 = getSchoolLogoBase64(context)
+        val sb = StringBuilder()
+        sb.append("<div class='artistic-header'>")
+        if (logoBase64.isNotBlank()) {
+            sb.append("<div class='artistic-logo-box'>")
+            sb.append("<img src='data:image/jpeg;base64,$logoBase64' class='artistic-logo-img' alt='School Logo' />")
+            sb.append("</div>")
+        }
+        sb.append("<div class='artistic-text-box'>")
+        sb.append("<div class='artistic-school-title'>${schoolTitle.uppercase()}</div>")
+        sb.append("<div class='artistic-report-title'>${reportTitle.uppercase()}</div>")
+        sb.append("<div class='artistic-motto'>✨ Excellence, Knowledge & Character • Waxbarasho Tayo Leh</div>")
+        sb.append("<div class='artistic-meta-row'>")
+        sb.append("<span><b>Ref Code:</b> $serialCode</span> &nbsp;|&nbsp; <span><b>Taariikhda:</b> $dateStr</span>")
+        if (!badgeText.isNullOrBlank()) {
+            sb.append(" &nbsp;|&nbsp; <span class='artistic-badge'>$badgeText</span>")
+        }
+        sb.append("</div>")
+        sb.append("</div>")
+        sb.append("</div>")
+        return sb.toString()
+    }
+
+    val artisticHeaderCss = """
+        .artistic-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #F0FDF4 0%, #F8FAFC 100%);
+            border: 1px solid #CBD5E1;
+            border-left: 6px solid #006A6B;
+            border-bottom: 2px solid #006A6B;
+        }
+        .artistic-logo-box {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .artistic-logo-img {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2.5px solid #006A6B;
+            box-shadow: 0 3px 8px rgba(0, 106, 107, 0.25);
+            background: #FFFFFF;
+        }
+        .artistic-text-box {
+            flex: 1;
+            text-align: left;
+        }
+        .artistic-school-title {
+            color: #006A6B;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            line-height: 1.15;
+            margin-bottom: 3px;
+        }
+        .artistic-report-title {
+            color: #1E293B;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+        }
+        .artistic-motto {
+            color: #059669;
+            font-size: 10px;
+            font-weight: 700;
+            font-style: italic;
+            margin-top: 2px;
+        }
+        .artistic-meta-row {
+            margin-top: 4px;
+            font-size: 10px;
+            color: #64748B;
+            font-weight: 600;
+        }
+        .artistic-badge {
+            display: inline-block;
+            background: #006A6B;
+            color: #FFFFFF;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+    """.trimIndent()
+
     // --- HTML Printable Report Card ---
     fun printReportCardHtml(context: Context, card: StudentReportCard) {
         val schoolHeader = schoolName.value.ifBlank { "SCHOOL MANAGEMENT SYSTEM" }
@@ -2198,54 +2319,169 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
     // --- Specific Printable HTML Reports ---
     fun printSingleStudentReport(context: Context, student: Student) {
         viewModelScope.launch {
-            val clsName = classes.value.find { it.id == student.classId }?.name ?: "N/A"
+            val cls = classes.value.find { it.id == student.classId }
+            val clsName = cls?.name ?: "N/A"
+            val teacherName = cls?.inchargeTeacher?.ifBlank { "Macallinka Fasalka" } ?: "Macallinka Fasalka"
             val studentFees = fees.value.filter { it.studentId == student.id }
             val studentAtt = allAttendance.value.filter { it.studentId == student.id }
+            val studentMarks = allExamMarks.value.filter { it.studentId == student.id }
+            val allExamsList = exams.value
 
             val totalAtt = studentAtt.size
             val presentAtt = studentAtt.count { it.status == "Present" }
+            val lateAtt = studentAtt.count { it.status == "Late" || it.status == "Habsan" || it.status == "H" }
+            val absentAtt = studentAtt.count { it.status == "Absent" || it.status == "A" }
             val attRate = if (totalAtt > 0) (presentAtt.toDouble() / totalAtt) * 100 else 100.0
 
-            val schoolHeader = schoolName.value.ifBlank { "SCHOOL MANAGEMENT SYSTEM" }
+            val totalScore = studentMarks.sumOf { it.score }
+            val totalMaxPossible = studentMarks.sumOf { m -> allExamsList.find { it.id == m.examId }?.totalMarks ?: 100.0 }
+            val academicAvg = if (totalMaxPossible > 0) (totalScore / totalMaxPossible) * 100.0 else 0.0
+
+            val schoolHeader = schoolName.value.ifBlank { "MAHDI CALI SCHOOL" }
             val serialCode = generateSerialCode("STR")
             val nowDateTime = getCurrentDateTimeStr()
 
             val html = StringBuilder()
             html.append("<html><head><style>")
-            html.append("body { font-family: sans-serif; padding: 20px; color: #1A1A1A; }")
-            html.append(".header { text-align: center; border-bottom: 2px solid #006A6B; padding-bottom: 10px; margin-bottom: 20px; }")
-            html.append(".title { color: #006A6B; font-size: 22px; font-weight: bold; }")
-            html.append(".sub { color: #555555; font-size: 13px; font-weight: bold; margin-top: 4px; }")
-            html.append("table { width: 100%; border-collapse: collapse; margin-top: 12px; }")
-            html.append("th { background: #006A6B; color: white; padding: 8px; text-align: left; font-size: 13px; }")
-            html.append("td { border-bottom: 1px solid #E2E8F0; padding: 8px; font-size: 13px; }")
-            html.append(".summary { background: #E6F4F1; padding: 12px; border-radius: 8px; margin-top: 16px; }")
+            html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #1E293B; background: #FFF; line-height: 1.5; }")
+            html.append(artisticHeaderCss)
+            html.append(".section-title { font-size: 13px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 4px solid #006A6B; padding-left: 8px; margin: 18px 0 8px 0; }")
+            html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px; }")
+            html.append(".info-item { margin-bottom: 4px; }")
+            html.append(".badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }")
+            html.append(".badge-free { background: #FEF3C7; color: #B45309; border: 1px solid #F59E0B; }")
+            html.append(".badge-pass { background: #DCFCE7; color: #15803D; }")
+            html.append(".badge-fail { background: #FEE2E2; color: #B91C1C; }")
+            html.append(".badge-paid { background: #DCFCE7; color: #15803D; }")
+            html.append(".badge-due { background: #FEE2E2; color: #B91C1C; }")
+            html.append("table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }")
+            html.append("th { background: #006A6B; color: #FFFFFF; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: bold; }")
+            html.append("td { border-bottom: 1px solid #E2E8F0; padding: 8px 10px; font-size: 11px; color: #334155; }")
+            html.append("tr:nth-child(even) { background-color: #F8FAFC; }")
+            html.append(".kpi-row { display: flex; gap: 10px; margin: 10px 0; }")
+            html.append(".kpi-card { flex: 1; background: #F1F5F9; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #CBD5E1; }")
+            html.append(".kpi-val { font-size: 16px; font-weight: 800; color: #006A6B; margin-top: 2px; }")
+            html.append(".kpi-lbl { font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; }")
+            html.append(".signatures { display: flex; justify-content: space-between; margin-top: 36px; padding-top: 16px; page-break-inside: avoid; }")
+            html.append(".sig-box { text-align: center; width: 40%; }")
+            html.append(".sig-line { border-top: 1px dashed #64748B; margin-top: 40px; padding-top: 4px; font-size: 11px; font-weight: bold; color: #475569; }")
+            html.append("@media print { body { padding: 10px; } }")
             html.append("</style></head><body>")
 
-            html.append("<div class='header'>")
-            html.append("<div class='title'>${schoolHeader.uppercase()}</div>")
-            html.append("<div class='sub'>STUDENT INDIVIDUAL REPORT STATEMENT</div>")
-            html.append("<div style='margin-top:6px; font-size:11px; color:#006A6B;'><b>Serial Code:</b> $serialCode &nbsp;|&nbsp; <b>Date & Time:</b> $nowDateTime</div>")
+            // Top Header with Artistic Logo
+            html.append(getArtisticHeaderHtml(
+                context = context,
+                schoolTitle = schoolHeader,
+                reportTitle = "WARBIXINTA GUUD EE ARDAYGA (STUDENT COMPREHENSIVE REPORT)",
+                serialCode = serialCode,
+                dateStr = nowDateTime,
+                badgeText = "OFFICIAL PROFILE"
+            ))
+
+            // Section 1: Student Information
+            html.append("<div class='section-title'>1. Xogta Shakhsiga & Diiwaanka (Student Profile)</div>")
+            html.append("<div class='info-grid'>")
+            html.append("<div class='info-item'><b>Magaca Ardayga:</b> ${student.name}</div>")
+            html.append("<div class='info-item'><b>Student ID:</b> <span style='font-family:monospace; font-weight:bold; color:#006A6B;'>${student.studentId}</span></div>")
+            html.append("<div class='info-item'><b>Fasalka:</b> $clsName &nbsp;(Macallin: $teacherName)</div>")
+            html.append("<div class='info-item'><b>Jinsiga:</b> ${student.gender}</div>")
+            html.append("<div class='info-item'><b>Magaca Hooyada:</b> ${student.motherName.ifBlank { "N/A" }}</div>")
+            html.append("<div class='info-item'><b>Telefoonka Waalidka:</b> ${student.phone.ifBlank { "N/A" }}</div>")
+            html.append("<div class='info-item'><b>Xaaladda Fiiga:</b> ${if (student.isFree) "<span class='badge badge-free'>FREE / SCHOLARSHIP (Bilaash)</span>" else "<span class='badge'>STANDARD ENROLLMENT</span>"}</div>")
+            html.append("<div class='info-item'><b>Status-ka Guud:</b> <span class='badge badge-pass'>ACTIVE ENROLLED</span></div>")
             html.append("</div>")
 
-            html.append("<p><b>Student Name:</b> ${student.name} &nbsp;&nbsp;&nbsp; <b>ID:</b> ${student.studentId}</p>")
-            html.append("<p><b>Class:</b> $clsName &nbsp;&nbsp;&nbsp; <b>Gender:</b> ${student.gender} &nbsp;&nbsp;&nbsp; <b>Mother:</b> ${student.motherName}</p>")
-            html.append("<p><b>Phone:</b> ${student.phone}</p>")
-
-            html.append("<h3>Fee Payment Records</h3>")
-            if (studentFees.isEmpty()) {
-                html.append("<p>No fee records found for this student.</p>")
+            // Section 2: Exam & Academic Performance
+            html.append("<div class='section-title'>2. Natiijooyinka Imtixaanaadka & Dhibcaha (Academic Performance)</div>")
+            if (studentMarks.isEmpty()) {
+                html.append("<p style='font-size:11px; color:#64748B; font-style:italic;'>Wax natiijooyin imtixaan ah weli looma diiwaangelin ardaygan.</p>")
             } else {
-                html.append("<table><tr><th>Fee Type</th><th>Amount</th><th>Currency</th><th>Due Date</th><th>Status</th><th>Paid Date</th></tr>")
-                studentFees.forEach { f ->
-                    html.append("<tr><td>${f.feeType}</td><td>${f.amount}</td><td>${f.currency}</td><td>${f.dueDate}</td><td>${f.paidStatus}</td><td>${f.paidDate.ifBlank { "-" }}</td></tr>")
+                html.append("<div class='kpi-row'>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Wadarta Dhibcaha</div><div class='kpi-val'>${String.format("%.1f", totalScore)} / ${String.format("%.0f", totalMaxPossible)}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Celceliska Guud (%)</div><div class='kpi-val'>${String.format("%.1f%%", academicAvg)}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Maadooyinka La Galay</div><div class='kpi-val'>${studentMarks.size}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Heerka Tacliinta</div><div class='kpi-val' style='color:${if (academicAvg >= 50) "#15803D" else "#B91C1C"}'>${if (academicAvg >= 50) "GUUL (PASS)" else "DHACAY (FAIL)"}</div></div>")
+                html.append("</div>")
+
+                html.append("<table>")
+                html.append("<thead><tr><th>Maadada</th><th>Imtixaanka</th><th>Dhibcaha</th><th>Max</th><th>Boqolkiiba</th><th>Darajada</th><th>Xaaladda</th></tr></thead><tbody>")
+                studentMarks.forEach { m ->
+                    val exam = allExamsList.find { it.id == m.examId }
+                    val examName = exam?.name ?: "Exam"
+                    val subjName = exam?.subject ?: "Subject"
+                    val maxM = exam?.totalMarks ?: 100.0
+                    val pct = if (maxM > 0) (m.score / maxM) * 100.0 else 0.0
+                    val grade = when {
+                        pct >= 90 -> "A+"
+                        pct >= 80 -> "A"
+                        pct >= 70 -> "B"
+                        pct >= 60 -> "C"
+                        pct >= 50 -> "D"
+                        else -> "F"
+                    }
+                    val isPass = pct >= 50
+                    html.append("<tr>")
+                    html.append("<td><b>$subjName</b></td>")
+                    html.append("<td>$examName</td>")
+                    html.append("<td>${String.format("%.1f", m.score)}</td>")
+                    html.append("<td>${String.format("%.0f", maxM)}</td>")
+                    html.append("<td>${String.format("%.1f%%", pct)}</td>")
+                    html.append("<td><b>$grade</b></td>")
+                    html.append("<td><span class='badge ${if (isPass) "badge-pass" else "badge-fail"}'>${if (isPass) "GUDUB" else "DHAC"}</span></td>")
+                    html.append("</tr>")
                 }
-                html.append("</table>")
+                html.append("</tbody></table>")
             }
 
-            html.append("<div class='summary'>")
-            html.append("<h4>Attendance Summary</h4>")
-            html.append("<p><b>Total Days Tracked:</b> $totalAtt &nbsp;&nbsp; <b>Present Days:</b> $presentAtt &nbsp;&nbsp; <b>Attendance Rate:</b> ${String.format("%.1f%%", attRate)}</p>")
+            // Section 3: Attendance Record
+            html.append("<div class='section-title'>3. Diiwaanka Xaadirinta & Joogitaanka (Attendance Record)</div>")
+            html.append("<div class='kpi-row'>")
+            html.append("<div class='kpi-card'><div class='kpi-lbl'>Wadarta Maalmaha</div><div class='kpi-val'>$totalAtt</div></div>")
+            html.append("<div class='kpi-card'><div class='kpi-lbl'>Joogay (Present)</div><div class='kpi-val' style='color:#15803D;'>$presentAtt</div></div>")
+            html.append("<div class='kpi-card'><div class='kpi-lbl'>Habsan (Late)</div><div class='kpi-val' style='color:#D97706;'>$lateAtt</div></div>")
+            html.append("<div class='kpi-card'><div class='kpi-lbl'>Maqnaa (Absent)</div><div class='kpi-val' style='color:#B91C1C;'>$absentAtt</div></div>")
+            html.append("<div class='kpi-card'><div class='kpi-lbl'>Boqolkiiba Xaadirinta</div><div class='kpi-val'>${String.format("%.1f%%", attRate)}</div></div>")
+            html.append("</div>")
+
+            // Section 4: Fee & Financial Record
+            html.append("<div class='section-title'>4. Diiwaanka Lacagaha & Bixinta Fiiga (Financial Statement)</div>")
+            if (student.isFree) {
+                html.append("<div style='background:#FEF3C7; border:1px solid #F59E0B; border-radius:6px; padding:12px; text-align:center;'>")
+                html.append("<b style='color:#B45309; font-size:13px;'>🌟 ARDAYGAN LACAGTA WAA LAGA DHAAFAY (FEE EXEMPT / SCHOLARSHIP)</b><br>")
+                html.append("<span style='color:#78350F; font-size:11px;'>Ardaygan wax lacag ah ama deyn ah laguma laha. Dugsigu wuxuu u siiyay deeq waxbarasho oo bilaash ah.</span>")
+                html.append("</div>")
+            } else if (studentFees.isEmpty()) {
+                html.append("<p style='font-size:11px; color:#64748B; font-style:italic;'>Wax diiwaan fiigo ah oo weli loo furay ardaygan lama helin.</p>")
+            } else {
+                val totalPaid = studentFees.filter { it.paidStatus == "Paid" }.sumOf { it.amount }
+                val totalPending = studentFees.filter { it.paidStatus != "Paid" }.sumOf { it.amount }
+
+                html.append("<div class='kpi-row'>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Wadarta La Bixiyay (Paid)</div><div class='kpi-val' style='color:#15803D;'>$${String.format("%.0f", totalPaid)}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Baaqiga Lagu Leeyahay (Due)</div><div class='kpi-val' style='color:${if (totalPending > 0) "#B91C1C" else "#15803D"};'>$${String.format("%.0f", totalPending)}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Tirada Qaansheeyada</div><div class='kpi-val'>${studentFees.size}</div></div>")
+                html.append("</div>")
+
+                html.append("<table>")
+                html.append("<thead><tr><th>Nooca Fiiga</th><th>Qadarka</th><th>Lacagta</th><th>Xilliga Bixinta</th><th>Xaaladda</th><th>Taariikhda La Bixiyay</th></tr></thead><tbody>")
+                studentFees.forEach { f ->
+                    val isPaid = f.paidStatus == "Paid"
+                    html.append("<tr>")
+                    html.append("<td><b>${f.feeType}</b></td>")
+                    html.append("<td>${String.format("%.0f", f.amount)}</td>")
+                    html.append("<td>${f.currency}</td>")
+                    html.append("<td>${f.dueDate}</td>")
+                    html.append("<td><span class='badge ${if (isPaid) "badge-paid" else "badge-due"}'>${f.paidStatus}</span></td>")
+                    html.append("<td>${f.paidDate.ifBlank { "-" }}</td>")
+                    html.append("</tr>")
+                }
+                html.append("</tbody></table>")
+            }
+
+            // Signatures Section
+            html.append("<div class='signatures'>")
+            html.append("<div class='sig-box'><div class='sig-line'>Macallinka Fasalka (Class Teacher)</div></div>")
+            html.append("<div class='sig-box'><div class='sig-line'>Maamulaha Dugsiga (Principal Stamp & Sign)</div></div>")
             html.append("</div>")
 
             html.append("</body></html>")
@@ -2268,27 +2504,28 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         val etbPaid = allFees.filter { it.currency == "ETB" && it.paidStatus == "Paid" }.sumOf { it.amount }
         val etbPending = allFees.filter { it.currency == "ETB" && it.paidStatus != "Paid" }.sumOf { it.amount }
 
-        val schoolHeader = schoolName.value.ifBlank { "SCHOOL MANAGEMENT SYSTEM" }
+        val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
         val serialCode = generateSerialCode("FIN")
         val nowDateTime = getCurrentDateTimeStr()
 
         val html = StringBuilder()
         html.append("<html><head><style>")
-        html.append("body { font-family: sans-serif; padding: 20px; color: #1A1A1A; }")
-        html.append(".header { text-align: center; border-bottom: 2px solid #006A6B; padding-bottom: 10px; margin-bottom: 15px; }")
-        html.append(".title { color: #006A6B; font-size: 22px; font-weight: bold; }")
-        html.append(".sub { color: #555555; font-size: 13px; font-weight: bold; margin-top: 4px; }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.4; }")
+        html.append(artisticHeaderCss)
         html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; }")
         html.append("th { background: #006A6B; color: white; padding: 8px; text-align: left; font-size: 12px; }")
         html.append("td { border-bottom: 1px solid #E2E8F0; padding: 6px; font-size: 12px; }")
-        html.append(".summary { background: #FFF8E1; padding: 12px; border-radius: 8px; margin-bottom: 15px; }")
+        html.append(".summary { background: #FFF8E1; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #FDE68A; }")
         html.append("</style></head><body>")
 
-        html.append("<div class='header'>")
-        html.append("<div class='title'>${schoolHeader.uppercase()}</div>")
-        html.append("<div class='sub'>FINANCIAL & FEE COLLECTION REPORT</div>")
-        html.append("<div style='margin-top:6px; font-size:11px; color:#006A6B;'><b>Serial Code:</b> $serialCode &nbsp;|&nbsp; <b>Date & Time:</b> $nowDateTime</div>")
-        html.append("</div>")
+        html.append(getArtisticHeaderHtml(
+            context = context,
+            schoolTitle = schoolHeader,
+            reportTitle = "WARBIXINTA LACAGAHA & MAALIYADDA (FINANCIAL & FEE REPORT)",
+            serialCode = serialCode,
+            dateStr = nowDateTime,
+            badgeText = "FINANCIAL STATEMENT"
+        ))
 
         html.append("<div class='summary'>")
         html.append("<b>Totals Breakdown:</b><br/>")
@@ -2312,26 +2549,27 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         val targetClasses = if (selectedClassId == 0L) classes.value else classes.value.filter { it.id == selectedClassId }
         val allStuds = students.value
 
-        val schoolHeader = schoolName.value.ifBlank { "SCHOOL MANAGEMENT SYSTEM" }
+        val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
         val serialCode = generateSerialCode("CLS")
         val nowDateTime = getCurrentDateTimeStr()
 
         val html = StringBuilder()
         html.append("<html><head><style>")
-        html.append("body { font-family: sans-serif; padding: 20px; color: #1A1A1A; }")
-        html.append(".header { text-align: center; border-bottom: 2px solid #006A6B; padding-bottom: 10px; margin-bottom: 15px; }")
-        html.append(".title { color: #006A6B; font-size: 22px; font-weight: bold; }")
-        html.append(".sub { color: #555555; font-size: 13px; font-weight: bold; margin-top: 4px; }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.4; }")
+        html.append(artisticHeaderCss)
         html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }")
         html.append("th { background: #006A6B; color: white; padding: 8px; text-align: left; font-size: 12px; }")
         html.append("td { border-bottom: 1px solid #E2E8F0; padding: 6px; font-size: 12px; }")
         html.append("</style></head><body>")
 
-        html.append("<div class='header'>")
-        html.append("<div class='title'>${schoolHeader.uppercase()}</div>")
-        html.append("<div class='sub'>CLASS DIRECTORY & ROSTER REPORT</div>")
-        html.append("<div style='margin-top:6px; font-size:11px; color:#006A6B;'><b>Serial Code:</b> $serialCode &nbsp;|&nbsp; <b>Date & Time:</b> $nowDateTime</div>")
-        html.append("</div>")
+        html.append(getArtisticHeaderHtml(
+            context = context,
+            schoolTitle = schoolHeader,
+            reportTitle = "DIIWAANKA ARDAYDA FASALLADA (CLASS DIRECTORY & ROSTER)",
+            serialCode = serialCode,
+            dateStr = nowDateTime,
+            badgeText = "CLASS ROSTER"
+        ))
 
         targetClasses.forEach { cls ->
             val clsStuds = allStuds.filter { it.classId == cls.id }
@@ -2410,13 +2648,19 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("<div class='document-container'>")
 
         // Header
-        html.append("<div class='header-box'>")
+        val logoBase64 = getSchoolLogoBase64(context)
+        html.append("<div class='header-box' style='display:flex; align-items:center; justify-content:center; gap:16px;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; flex-shrink:0; background:#FFF;' alt='Logo' />")
+        }
+        html.append("<div style='flex:1; text-align:center;'>")
         html.append("<div class='gov-title'>JAMHUURIYADDA SOMALILAND • WASAARADDA WAXBARASHADA IYO SAYNIISKA</div>")
         html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
         html.append("<div class='doc-banner'>WARQADDA ARDAYGA</div>")
         val serialCodeCLR = generateSerialCode("CLR")
         val nowDateTimeCLR = getCurrentDateTimeStr()
         html.append("<div style='margin-top:4px; font-size:10px; font-weight:bold; color:#004D4E;'>SERIAL CODE: $serialCodeCLR &nbsp;|&nbsp; TAARIIKHDA: $nowDateTimeCLR</div>")
+        html.append("</div>")
         html.append("</div>")
 
         // Student Metadata Table
@@ -2825,26 +3069,27 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         val allStuds = students.value
         val allAtt = allAttendance.value
 
-        val schoolHeader = schoolName.value.ifBlank { "SCHOOL MANAGEMENT SYSTEM" }
+        val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
         val serialCodeATT = generateSerialCode("ATT")
         val nowDateTimeATT = getCurrentDateTimeStr()
 
         val html = StringBuilder()
         html.append("<html><head><style>")
-        html.append("body { font-family: sans-serif; padding: 20px; color: #1A1A1A; }")
-        html.append(".header { text-align: center; border-bottom: 2px solid #006A6B; padding-bottom: 10px; margin-bottom: 15px; }")
-        html.append(".title { color: #006A6B; font-size: 22px; font-weight: bold; }")
-        html.append(".sub { color: #555555; font-size: 13px; font-weight: bold; margin-top: 4px; }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.4; }")
+        html.append(artisticHeaderCss)
         html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }")
         html.append("th { background: #006A6B; color: white; padding: 8px; text-align: left; font-size: 12px; }")
         html.append("td { border-bottom: 1px solid #E2E8F0; padding: 6px; font-size: 12px; }")
         html.append("</style></head><body>")
 
-        html.append("<div class='header'>")
-        html.append("<div class='title'>${schoolHeader.uppercase()}</div>")
-        html.append("<div class='sub'>ATTENDANCE SUMMARY REPORT</div>")
-        html.append("<div style='margin-top:6px; font-size:11px; color:#006A6B;'><b>Serial Code:</b> $serialCodeATT &nbsp;|&nbsp; <b>Date & Time:</b> $nowDateTimeATT</div>")
-        html.append("</div>")
+        html.append(getArtisticHeaderHtml(
+            context = context,
+            schoolTitle = schoolHeader,
+            reportTitle = "WARBIXINTA GUUD EE XAADIRINTA (ATTENDANCE SUMMARY REPORT)",
+            serialCode = serialCodeATT,
+            dateStr = nowDateTimeATT,
+            badgeText = "ATTENDANCE REPORT"
+        ))
 
         targetClasses.forEach { cls ->
             val clsStuds = allStuds.filter { it.classId == cls.id }
@@ -3075,7 +3320,12 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append(".footer { display: flex; justify-content: space-between; margin-top: 25px; font-size: 11px; font-weight: bold; }")
         html.append("</style></head><body>")
 
-        html.append("<div class='header'>")
+        val logoBase64 = getSchoolLogoBase64(context)
+        html.append("<div class='header' style='display:flex; align-items:center; justify-content:center; gap:16px;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; flex-shrink:0;' alt='Logo' />")
+        }
+        html.append("<div style='flex:1; text-align:center;'>")
         html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
         html.append("<div class='doc-title'>XAASHIDA XAADIRINTA BISHA (MONTHLY ATTENDANCE SHEET) - $yearMonth</div>")
         html.append("<div class='meta-bar'>")
@@ -3084,7 +3334,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("<div>Maalmaha la Diiwaangeliyay: <u>${distinctDates.size} Maalmood</u></div>")
         html.append("<div>Serial: <u>$serialCodeATT</u></div>")
         html.append("<div>Taariikhda: <u>$nowDateTimeATT</u></div>")
-        html.append("</div></div>")
+        html.append("</div></div></div>")
 
         if (classStudents.isEmpty()) {
             html.append("<p style='text-align:center; margin-top:30px; font-size:13px;'>Fasalkan arday kuma jirto.</p>")
@@ -3246,9 +3496,15 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append(".sig-line { border-bottom: 1px solid #4A5568; margin-top: 32px; }")
         html.append("</style></head><body>")
 
+        val logoBase64 = getSchoolLogoBase64(context)
         html.append("<div class='header-box'>")
-        html.append("<div class='top-bar'>")
+        html.append("<div class='top-bar' style='display:flex; align-items:center; justify-content:space-between;'>")
+        html.append("<div style='display:flex; align-items:center; gap:12px;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; background:#FFF;' alt='Logo' />")
+        }
         html.append("<div class='school-title'>$schoolHeader</div>")
+        html.append("</div>")
         html.append("<div class='doc-badge'>WARQAD DIGIIN / DISCIPLINARY NOTICE</div>")
         html.append("</div>")
         html.append("<div class='doc-title'>WARBIXINTA HABSANKA & MAQNAANSHAHA ARDAYGA</div>")
@@ -3361,9 +3617,15 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append(".footer { display: flex; justify-content: space-between; margin-top: 26px; font-size: 11px; font-weight: bold; }")
         html.append("</style></head><body>")
 
+        val logoBase64 = getSchoolLogoBase64(context)
         html.append("<div class='header-box'>")
-        html.append("<div class='top-bar'>")
+        html.append("<div class='top-bar' style='display:flex; align-items:center; justify-content:space-between;'>")
+        html.append("<div style='display:flex; align-items:center; gap:12px;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; background:#FFF;' alt='Logo' />")
+        }
         html.append("<div class='school-title'>$schoolHeader</div>")
+        html.append("</div>")
         html.append("<div class='doc-badge'>WARBIXINTA HABSANKA & MAQNAANSHAHA</div>")
         html.append("</div>")
         html.append("<div class='doc-title'>WARBIXINTA GUUD EE HABSANKA ARDAYDA FASALKA: $className</div>")
@@ -3552,9 +3814,15 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append(".sig-line { border-bottom: 1px solid #4A5568; margin-top: 28px; }")
         html.append("</style></head><body>")
 
+        val logoBase64 = getSchoolLogoBase64(context)
         html.append("<div class='header-box'>")
-        html.append("<div class='top-logo-bar'>")
+        html.append("<div class='top-logo-bar' style='display:flex; align-items:center; justify-content:space-between;'>")
+        html.append("<div style='display:flex; align-items:center; gap:12px;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; background:#FFF;' alt='Logo' />")
+        }
         html.append("<div class='school-title'>$schoolHeader</div>")
+        html.append("</div>")
         html.append("<div class='doc-badge'>OFFICIAL GRADE SHEET</div>")
         html.append("</div>")
 
@@ -3714,6 +3982,16 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
             """.trimIndent())
         }
 
+        val logoBase64 = getSchoolLogoBase64(context)
+        val headerHtml = getArtisticHeaderHtml(
+            context = context,
+            schoolTitle = schoolHeader,
+            reportTitle = "DAAH-FURNAANTA & DIIWAANKA HAWLAHA (TRANSPARENCY & AUDIT LOG)",
+            serialCode = generateSerialCode("AUD"),
+            dateStr = dateStr,
+            badgeText = "SYSTEM AUDIT"
+        )
+
         val html = """
             <!DOCTYPE html>
             <html>
@@ -3722,20 +4000,14 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
                 <title>Transparency & Audit Log</title>
                 <style>
                     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; color: #1F2937; }
-                    .header { text-align: center; border-bottom: 2px solid #008080; padding-bottom: 12px; margin-bottom: 16px; }
-                    .header h1 { margin: 0; color: #008080; font-size: 20px; text-transform: uppercase; }
-                    .header p { margin: 4px 0 0 0; color: #6B7280; font-size: 12px; }
+                    $artisticHeaderCss
                     table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
-                    th { background-color: #008080; color: white; padding: 8px; border: 1px solid #008080; text-align: left; font-size: 11px; }
+                    th { background-color: #006A6B; color: white; padding: 8px; border: 1px solid #006A6B; text-align: left; font-size: 11px; }
                     .footer { margin-top: 24px; font-size: 10px; color: #9CA3AF; text-align: right; }
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <h1>$schoolHeader</h1>
-                    <p>Warbixinta Daah-furnaanta & Diiwaanka Hawlaha Macalimiinta (Transparency & Audit Trail)</p>
-                    <p>Taariikhda Daabacaadda: $dateStr | Wadarta Diiwaannada: ${filteredLogs.size}</p>
-                </div>
+                $headerHtml
                 <table>
                     <thead>
                         <tr>

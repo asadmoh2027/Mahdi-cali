@@ -186,6 +186,8 @@ class MainActivity : ComponentActivity() {
                             },
                             onDeleteStudentClick = { id -> viewModel.deleteStudent(id) },
                             onToggleFreeClick = { id, isFree -> viewModel.toggleStudentFree(id, isFree) },
+                            schoolName = schoolName,
+                            onPrintStudentReport = { student -> viewModel.printSingleStudentReport(this@MainActivity, student) },
                             onBackClick = { navController.popBackStack() }
                         )
                     }
