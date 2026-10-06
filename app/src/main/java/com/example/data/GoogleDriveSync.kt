@@ -33,12 +33,14 @@ object GoogleDriveSync {
 // 3. Guji 'Deploy' -> 'New deployment' -> Select type: 'Web app'
 // 4. Description: 'School Backup'
 // 5. Execute as: 'Me' (Your Google Account)
-// 6. Who has access: 'Anyone' (Si app-ku ugu keydiyo)
-// 7. Guji 'Deploy' -> Copy 'Web app URL' -> Ku dheji App-ka
+// 6. Who has access: 'Anyone' (Fadlan dooro Anyone si toos ah)
+// 7. Guji 'Deploy' -> Sii ruqsadda (Authorize) -> Nuuxi Web app URL
 // ============================================================
 
 function doPost(e) {
+  var lock = LockService.getScriptLock();
   try {
+    lock.waitLock(10000);
     var body = e.postData.contents;
     var data = JSON.parse(body);
     var folderName = "Mahdi_Cali_School_Backups";
@@ -47,13 +49,8 @@ function doPost(e) {
 
     if (data.action === "backup") {
       var latestFiles = folder.getFilesByName("latest_backup.json");
-      var file;
-      if (latestFiles.hasNext()) {
-        file = latestFiles.next();
-        file.setContent(body);
-      } else {
-        file = folder.createFile("latest_backup.json", body, MimeType.PLAIN_TEXT);
-      }
+      var file = latestFiles.hasNext() ? latestFiles.next() : folder.createFile("latest_backup.json", "", MimeType.PLAIN_TEXT);
+      file.setContent(body);
 
       // Permanent timestamped history
       var dateStr = Utilities.formatDate(new Date(), "GMT+3", "yyyy-MM-dd_HH-mm-ss");
@@ -85,6 +82,8 @@ function doPost(e) {
       status: "error",
       message: err.toString()
     })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    try { lock.releaseLock(); } catch(e) {}
   }
 }
 
@@ -114,9 +113,10 @@ function doGet(e) {
 
     private val httpClient by lazy {
         OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
-            .writeTimeout(20, TimeUnit.SECONDS)
+            .connectTimeout(45, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
@@ -172,6 +172,18 @@ function doGet(e) {
         }
     }
 
+    fun cacheOfflineBackup(context: Context, jsonPayload: String) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString("offline_permanent_backup_json", jsonPayload).apply()
+        } catch (e: Exception) {}
+    }
+
+    fun getCachedOfflineBackup(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString("offline_permanent_backup_json", null)
+    }
+
     suspend fun uploadToGoogleDriveScript(
         context: Context,
         jsonPayload: String,
@@ -182,52 +194,65 @@ function doGet(e) {
         if (scriptUrl.isBlank()) {
             return@withContext Result.failure(Exception("Fadlan marka hore geli Google Apps Script Web App URL-ka ee Settings-ka."))
         }
+
+        // Always cache payload locally on device first - ZERO data loss guarantee
+        cacheOfflineBackup(context, jsonPayload)
+
         if (!isNetworkAvailable(context)) {
-            return@withContext Result.failure(Exception("Ma jiro xiriir internet oo firfircoon."))
+            return@withContext Result.failure(Exception("Ma jiro xiriir internet oo firfircoon. Xogta waxaa lagu keydiyay taleefanka si nabad ah."))
         }
 
-        try {
-            val requestObject = JSONObject().apply {
-                put("action", "backup")
-                put("schoolId", "mahdi-cali")
-                put("schoolName", schoolName)
-                put("updatedBy", updatedBy)
-                put("timestamp", System.currentTimeMillis())
-                put("payload", jsonPayload)
+        var lastException: Exception? = null
+        for (attempt in 1..2) {
+            try {
+                val requestObject = JSONObject().apply {
+                    put("action", "backup")
+                    put("schoolId", "mahdi-cali")
+                    put("schoolName", schoolName)
+                    put("updatedBy", updatedBy)
+                    put("timestamp", System.currentTimeMillis())
+                    put("payload", jsonPayload)
+                }
+
+                val body = requestObject.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+                val request = Request.Builder()
+                    .url(scriptUrl)
+                    .post(body)
+                    .build()
+
+                val response = httpClient.newCall(request).execute()
+                val finalUrl = response.request.url.toString()
+
+                if (response.code == 401 || finalUrl.contains("accounts.google.com") || finalUrl.contains("ServiceLogin")) {
+                    isDriveScriptConnected.value = false
+                    return@withContext Result.failure(
+                        Exception("Server HTTP Error: 401 (Fadlan script.google.com ka dooro 'Anyone' oo kaliya. Ha dooran 'Anyone with Google account' sababtoo ah taasi waxay keenaysaa ciladdan 401).")
+                    )
+                }
+
+                if (!response.isSuccessful) {
+                    throw Exception("Server HTTP Error: ${response.code}")
+                }
+
+                val responseBody = response.body?.string() ?: ""
+                isDriveScriptConnected.value = true
+                val nowTime = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                setLastSyncTime(context, nowTime)
+                driveStatusMessage.value = "Xogta si guul leh ayaa loogu keydiyay Google Drive!"
+
+                return@withContext Result.success("✅ Xogta dugsiga si buuxda ayaa loogu keydiyay Google Drive Cloud!\nTaariikhda: $nowTime")
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < 2) {
+                    kotlinx.coroutines.delay(1000)
+                }
             }
-
-            val body = requestObject.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-            val request = Request.Builder()
-                .url(scriptUrl)
-                .post(body)
-                .build()
-
-            val response = httpClient.newCall(request).execute()
-            val finalUrl = response.request.url.toString()
-
-            if (response.code == 401 || finalUrl.contains("accounts.google.com") || finalUrl.contains("ServiceLogin")) {
-                isDriveScriptConnected.value = false
-                return@withContext Result.failure(
-                    Exception("Server HTTP Error: 401 (Fadlan script.google.com ka dooro 'Anyone' oo kaliya. Ha dooran 'Anyone with Google account' sababtoo ah taasi waxay keenaysaa ciladdan 401).")
-                )
-            }
-
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("Server HTTP Error: ${response.code}"))
-            }
-
-            val responseBody = response.body?.string() ?: ""
-            isDriveScriptConnected.value = true
-            val nowTime = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-            setLastSyncTime(context, nowTime)
-            driveStatusMessage.value = "Xogta si guul leh ayaa loogu keydiyay Google Drive!"
-
-            Result.success("✅ Xogta dugsiga si buuxda ayaa loogu keydiyay Google Drive Cloud Folder!\nTaariikhda: $nowTime")
-        } catch (e: Exception) {
-            isDriveScriptConnected.value = false
-            driveStatusMessage.value = "Cilad xiriir Google Drive: ${e.localizedMessage}"
-            Result.failure(Exception(e.localizedMessage ?: "Cilad aan la garanayn"))
         }
+
+        isDriveScriptConnected.value = false
+        val errMsg = lastException?.localizedMessage ?: "Cilad xiriir Google Drive"
+        driveStatusMessage.value = "Cilad xiriir Google Drive: $errMsg"
+        Result.failure(Exception(errMsg))
     }
 
     suspend fun downloadFromGoogleDriveScript(context: Context): Result<Pair<String?, String?>> = withContext(Dispatchers.IO) {

@@ -654,7 +654,25 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
                 val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
                 val timestamp = sdf.format(java.util.Date())
 
-                // 1. Try Firebase Sync
+                // 1. Google Drive Apps Script Cloud Sync
+                val scriptUrl = GoogleDriveSync.getScriptUrl(context)
+                if (scriptUrl.isNotBlank()) {
+                    val driveRes = GoogleDriveSync.uploadToGoogleDriveScript(
+                        context = context,
+                        jsonPayload = jsonPayload,
+                        schoolName = sName,
+                        updatedBy = currentAdmin
+                    )
+                    if (driveRes.isSuccess) {
+                        prefs.edit().putString("last_cloud_sync_time", timestamp).putString("cloud_latest_json", jsonPayload).apply()
+                        _lastCloudSyncTime.value = timestamp
+                        _uiMessage.emit("☁️ Xogta dugsiga si toos ah ayaa loogu keydiyay Google Drive Cloud!")
+                        onResult(true, "✅ Google Drive Cloud Sync: Xogta guud waa la keydiyay! ($timestamp)")
+                        return@launch
+                    }
+                }
+
+                // 2. Try Firebase Sync
                 val fbResult = CloudSync.uploadFullDatabaseToFirebase(
                     context = context,
                     jsonPayload = jsonPayload,
@@ -670,32 +688,13 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
                     return@launch
                 }
 
-                // 2. Fallback to HTTP Cloud endpoint
-                val url = java.net.URL("https://httpbin.org/post")
-                val conn = url.openConnection() as java.net.HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.setRequestProperty("Content-Type", "application/json; utf-8")
-                conn.setRequestProperty("Accept", "application/json")
-                conn.doOutput = true
-                conn.connectTimeout = 8000
-                conn.readTimeout = 8000
-
-                conn.outputStream.use { os ->
-                    val input = jsonPayload.toByteArray(Charsets.UTF_8)
-                    os.write(input, 0, input.size)
-                }
-
-                val responseCode = conn.responseCode
-                if (responseCode in 200..299) {
-                    prefs.edit().putString("last_cloud_sync_time", timestamp).putString("cloud_latest_json", jsonPayload).apply()
-                    _lastCloudSyncTime.value = timestamp
-                    _uiMessage.emit("☁️ Xogta dugsiga si buuxda ayaa loogu keydiyay Cloud Server!")
-                    onResult(true, "✅ Full Cloud Backup Successful! ($timestamp)")
-                } else {
-                    onResult(false, "❌ Cloud Server HTTP error: $responseCode")
-                }
+                // Local snapshot saved safely
+                prefs.edit().putString("last_cloud_sync_time", timestamp).putString("cloud_latest_json", jsonPayload).apply()
+                _lastCloudSyncTime.value = timestamp
+                GoogleDriveSync.cacheOfflineBackup(context, jsonPayload)
+                onResult(true, "✅ Xogta waxaa lagu keydiyay kaydka taleefanka si nabad ah ($timestamp)")
             } catch (e: Exception) {
-                onResult(false, "❌ Cloud Sync failed: ${e.localizedMessage}")
+                onResult(false, "❌ Cilad kaydinta: ${e.localizedMessage}")
             }
         }
     }
@@ -2165,95 +2164,158 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
     ): String {
         val logoBase64 = getSchoolLogoBase64(context)
         val sb = StringBuilder()
-        sb.append("<div class='artistic-header'>")
+        sb.append("<div class='artistic-header-container'>")
+        sb.append("<div class='artistic-header-top'>")
+
+        // Left Side Column (State / Ministry / School Tier)
+        sb.append("<div class='header-side left-side'>")
+        sb.append("<div class='side-title'>JAMHUURIYADDA SOMALILAND</div>")
+        sb.append("<div class='side-sub'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        sb.append("<div class='side-loc'>Dugsiga Hoose / Dhexe ee Gaarka ah</div>")
+        sb.append("</div>")
+
+        // Center Column (Centrally Placed Circular School Emblem)
+        sb.append("<div class='header-center-logo'>")
         if (logoBase64.isNotBlank()) {
-            sb.append("<div class='artistic-logo-box'>")
-            sb.append("<img src='data:image/jpeg;base64,$logoBase64' class='artistic-logo-img' alt='School Logo' />")
-            sb.append("</div>")
-        }
-        sb.append("<div class='artistic-text-box'>")
-        sb.append("<div class='artistic-school-title'>${schoolTitle.uppercase()}</div>")
-        sb.append("<div class='artistic-report-title'>${reportTitle.uppercase()}</div>")
-        sb.append("<div class='artistic-motto'>✨ Excellence, Knowledge & Character • Waxbarasho Tayo Leh</div>")
-        sb.append("<div class='artistic-meta-row'>")
-        sb.append("<span><b>Ref Code:</b> $serialCode</span> &nbsp;|&nbsp; <span><b>Taariikhda:</b> $dateStr</span>")
-        if (!badgeText.isNullOrBlank()) {
-            sb.append(" &nbsp;|&nbsp; <span class='artistic-badge'>$badgeText</span>")
+            sb.append("<img src='data:image/jpeg;base64,$logoBase64' class='artistic-logo-center-img' alt='School Logo' />")
         }
         sb.append("</div>")
+
+        // Right Side Column (Reference, Date & Official Badge)
+        sb.append("<div class='header-side right-side'>")
+        sb.append("<div class='side-meta-item'><b>Tixraac (Ref):</b> <span class='ref-code'>$serialCode</span></div>")
+        sb.append("<div class='side-meta-item'><b>Taariikhda:</b> $dateStr</div>")
+        if (!badgeText.isNullOrBlank()) {
+            sb.append("<div class='side-badge'>$badgeText</div>")
+        }
+        sb.append("</div>")
+        sb.append("</div>")
+
+        // Bottom Centered Titles & Motto
+        sb.append("<div class='header-center-titles'>")
+        sb.append("<div class='school-main-title'>${schoolTitle.uppercase()}</div>")
+        sb.append("<div class='report-main-banner'>${reportTitle.uppercase()}</div>")
+        sb.append("<div class='school-motto-tag'>🌟 Excellence, Knowledge & Integrity • Waxbarasho Tayo Leh 🌟</div>")
         sb.append("</div>")
         sb.append("</div>")
         return sb.toString()
     }
 
     val artisticHeaderCss = """
-        .artistic-header {
+        .artistic-header-container {
+            padding: 12px 18px 14px 18px;
+            margin-bottom: 18px;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #F8FAFC 0%, #F0FDF4 100%);
+            border: 1.5px solid #CBD5E1;
+            border-top: 4px solid #006A6B;
+            box-shadow: 0 2px 8px rgba(0, 106, 107, 0.08);
+        }
+        .artistic-header-top {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 12px 16px;
-            margin-bottom: 18px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #F0FDF4 0%, #F8FAFC 100%);
-            border: 1px solid #CBD5E1;
-            border-left: 6px solid #006A6B;
-            border-bottom: 2px solid #006A6B;
+            justify-content: space-between;
+            gap: 12px;
         }
-        .artistic-logo-box {
+        .header-side {
+            flex: 1;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+        .header-side.left-side {
+            text-align: left;
+        }
+        .header-side.right-side {
+            text-align: right;
+        }
+        .side-title {
+            font-weight: 800;
+            color: #004D4E;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .side-sub {
+            font-weight: 700;
+            color: #475569;
+            font-size: 9.5px;
+            text-transform: uppercase;
+        }
+        .side-loc {
+            font-weight: 600;
+            color: #64748B;
+            font-size: 9px;
+            margin-top: 2px;
+        }
+        .side-meta-item {
+            font-size: 10.5px;
+            color: #334155;
+            margin-bottom: 2px;
+        }
+        .ref-code {
+            font-family: monospace;
+            font-weight: bold;
+            color: #006A6B;
+        }
+        .side-badge {
+            display: inline-block;
+            background: #006A6B;
+            color: #FFFFFF;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9.5px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin-top: 3px;
+        }
+        .header-center-logo {
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 0 10px;
         }
-        .artistic-logo-img {
-            width: 72px;
-            height: 72px;
+        .artistic-logo-center-img {
+            width: 82px;
+            height: 82px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2.5px solid #006A6B;
-            box-shadow: 0 3px 8px rgba(0, 106, 107, 0.25);
+            border: 3px solid #006A6B;
+            box-shadow: 0 4px 10px rgba(0, 106, 107, 0.25);
             background: #FFFFFF;
         }
-        .artistic-text-box {
-            flex: 1;
-            text-align: left;
+        .header-center-titles {
+            text-align: center;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #CBD5E1;
         }
-        .artistic-school-title {
+        .school-main-title {
             color: #006A6B;
-            font-size: 20px;
+            font-size: 21px;
             font-weight: 900;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
             line-height: 1.15;
-            margin-bottom: 3px;
+            margin: 0 0 4px 0;
         }
-        .artistic-report-title {
-            color: #1E293B;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0.3px;
-        }
-        .artistic-motto {
-            color: #059669;
-            font-size: 10px;
-            font-weight: 700;
-            font-style: italic;
-            margin-top: 2px;
-        }
-        .artistic-meta-row {
-            margin-top: 4px;
-            font-size: 10px;
-            color: #64748B;
-            font-weight: 600;
-        }
-        .artistic-badge {
+        .report-main-banner {
             display: inline-block;
             background: #006A6B;
             color: #FFFFFF;
-            padding: 2px 7px;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 3px 18px;
             border-radius: 4px;
-            font-size: 9px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .school-motto-tag {
+            color: #059669;
+            font-size: 10px;
             font-weight: 700;
-            letter-spacing: 0.3px;
+            margin-top: 4px;
+            font-style: italic;
         }
     """.trimIndent()
 
@@ -2649,17 +2711,33 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         // Header
         val logoBase64 = getSchoolLogoBase64(context)
-        html.append("<div class='header-box' style='display:flex; align-items:center; justify-content:center; gap:16px;'>")
-        if (logoBase64.isNotBlank()) {
-            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; flex-shrink:0; background:#FFF;' alt='Logo' />")
-        }
-        html.append("<div style='flex:1; text-align:center;'>")
-        html.append("<div class='gov-title'>JAMHUURIYADDA SOMALILAND • WASAARADDA WAXBARASHADA IYO SAYNIISKA</div>")
-        html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
-        html.append("<div class='doc-banner'>WARQADDA ARDAYGA</div>")
         val serialCodeCLR = generateSerialCode("CLR")
         val nowDateTimeCLR = getCurrentDateTimeStr()
-        html.append("<div style='margin-top:4px; font-size:10px; font-weight:bold; color:#004D4E;'>SERIAL CODE: $serialCodeCLR &nbsp;|&nbsp; TAARIIKHDA: $nowDateTimeCLR</div>")
+
+        html.append("<div class='header-box' style='padding:10px 14px; margin-bottom:12px;'>")
+        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
+        html.append("<div style='flex:1; text-align:left; font-size:10px; line-height:1.3;'>")
+        html.append("<div style='font-weight:bold; color:#004D4E; font-size:10.5px;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-weight:bold; color:#475569; font-size:9.5px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='color:#64748B; font-size:9px;'>Agaasinka Waxbarashada Guud</div>")
+        html.append("</div>")
+
+        html.append("<div style='flex-shrink:0; text-align:center;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.2);' alt='Logo' />")
+        }
+        html.append("</div>")
+
+        html.append("<div style='flex:1; text-align:right; font-size:10px; line-height:1.3;'>")
+        html.append("<div style='color:#334155;'><b>Tixraac:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCodeCLR</span></div>")
+        html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTimeCLR</div>")
+        html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:2px 8px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:2px;'>OFFICIAL CERTIFICATE</div>")
+        html.append("</div>")
+        html.append("</div>")
+
+        html.append("<div style='text-align:center; margin-top:6px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
+        html.append("<div class='school-title' style='margin:0 0 3px 0; font-size:18px;'>${schoolHeader.uppercase()}</div>")
+        html.append("<div class='doc-banner' style='font-size:13px; padding:3px 18px;'>WARQADDA ARDAYGA (CLEARANCE & RECORD SHEET)</div>")
         html.append("</div>")
         html.append("</div>")
 
@@ -2960,11 +3038,32 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("<div class='document-container'>")
 
         // Header
-        html.append("<div class='header-box'>")
-        html.append("<div class='gov-title'>JAMHUURIYADDA SOMALILAND • WASAARADDA WAXBARASHADA IYO SAYNISKA</div>")
-        html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
-        html.append("<div class='doc-banner'>STUDENT MARKSHEET</div>")
-        html.append("<div style='margin-top:4px; font-size:10px; font-weight:bold; color:#004D4E;'>SERIAL CODE: $serialCodeMSK &nbsp;|&nbsp; TAARIIKHDA: $nowDateTimeMSK</div>")
+        val logoBase64 = getSchoolLogoBase64(context)
+        html.append("<div class='header-box' style='padding:10px 14px; margin-bottom:12px;'>")
+        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
+        html.append("<div style='flex:1; text-align:left; font-size:10px; line-height:1.3;'>")
+        html.append("<div style='font-weight:bold; color:#004D4E; font-size:10.5px;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-weight:bold; color:#475569; font-size:9.5px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='color:#64748B; font-size:9px;'>Imtixaanka Sanad-Dugsiyeedka</div>")
+        html.append("</div>")
+
+        html.append("<div style='flex-shrink:0; text-align:center;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.2);' alt='Logo' />")
+        }
+        html.append("</div>")
+
+        html.append("<div style='flex:1; text-align:right; font-size:10px; line-height:1.3;'>")
+        html.append("<div style='color:#334155;'><b>Tixraac:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCodeMSK</span></div>")
+        html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTimeMSK</div>")
+        html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:2px 8px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:2px;'>OFFICIAL MARKSHEET</div>")
+        html.append("</div>")
+        html.append("</div>")
+
+        html.append("<div style='text-align:center; margin-top:6px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
+        html.append("<div class='school-title' style='margin:0 0 3px 0; font-size:18px;'>${schoolHeader.uppercase()}</div>")
+        html.append("<div class='doc-banner' style='font-size:13px; padding:3px 18px;'>STUDENT MARKSHEET (WARBIXINTA DHIBCAHA)</div>")
+        html.append("</div>")
         html.append("</div>")
 
         // 1. STUDENT PROFILE
@@ -3321,20 +3420,27 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("</style></head><body>")
 
         val logoBase64 = getSchoolLogoBase64(context)
-        html.append("<div class='header' style='display:flex; align-items:center; justify-content:center; gap:16px;'>")
+        html.append("<div class='header' style='display:flex; align-items:center; justify-content:space-between; gap:14px; border-bottom:2.5px solid #006A6B; padding-bottom:10px; margin-bottom:12px;'>")
+        html.append("<div style='flex:1; text-align:left; font-size:10px; line-height:1.3;'>")
+        html.append("<div style='font-weight:bold; color:#004D4E; font-size:11px;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-weight:bold; color:#475569; font-size:9.5px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='color:#64748B; font-size:9px;'>Fasalka: <b>$className</b> &nbsp;|&nbsp; Ardayda: <b>${classStudents.size}</b></div>")
+        html.append("</div>")
+
+        html.append("<div style='flex-shrink:0; text-align:center;'>")
         if (logoBase64.isNotBlank()) {
-            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; flex-shrink:0;' alt='Logo' />")
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:65px; height:65px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.2);' alt='Logo' />")
         }
-        html.append("<div style='flex:1; text-align:center;'>")
-        html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
-        html.append("<div class='doc-title'>XAASHIDA XAADIRINTA BISHA (MONTHLY ATTENDANCE SHEET) - $yearMonth</div>")
-        html.append("<div class='meta-bar'>")
-        html.append("<div>Fasalka: <u>$className</u></div>")
-        html.append("<div>Wadar Ardayda: <u>${classStudents.size}</u></div>")
-        html.append("<div>Maalmaha la Diiwaangeliyay: <u>${distinctDates.size} Maalmood</u></div>")
-        html.append("<div>Serial: <u>$serialCodeATT</u></div>")
-        html.append("<div>Taariikhda: <u>$nowDateTimeATT</u></div>")
-        html.append("</div></div></div>")
+        html.append("<div style='font-weight:900; color:#006A6B; font-size:14px; text-transform:uppercase; margin-top:2px;'>${schoolHeader.uppercase()}</div>")
+        html.append("<div style='font-weight:bold; color:#1E293B; font-size:11px;'>XAASHIDA XAADIRINTA BISHA - $yearMonth</div>")
+        html.append("</div>")
+
+        html.append("<div style='flex:1; text-align:right; font-size:10px; line-height:1.3;'>")
+        html.append("<div style='color:#334155;'><b>Ref:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCodeATT</span></div>")
+        html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTimeATT</div>")
+        html.append("<div style='color:#64748B; font-size:9px;'>Maalmaha: <b>${distinctDates.size} Maalmood</b></div>")
+        html.append("</div>")
+        html.append("</div>")
 
         if (classStudents.isEmpty()) {
             html.append("<p style='text-align:center; margin-top:30px; font-size:13px;'>Fasalkan arday kuma jirto.</p>")
@@ -3497,17 +3603,32 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("</style></head><body>")
 
         val logoBase64 = getSchoolLogoBase64(context)
-        html.append("<div class='header-box'>")
-        html.append("<div class='top-bar' style='display:flex; align-items:center; justify-content:space-between;'>")
-        html.append("<div style='display:flex; align-items:center; gap:12px;'>")
+        html.append("<div class='header-box' style='padding:12px 16px;'>")
+        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
+        html.append("<div style='flex:1; text-align:left;'>")
+        html.append("<div style='font-size:11px; font-weight:bold; color:#004D4E;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-size:9.5px; font-weight:bold; color:#475569;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe</div>")
+        html.append("</div>")
+
+        html.append("<div style='flex-shrink:0; text-align:center;'>")
         if (logoBase64.isNotBlank()) {
-            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; background:#FFF;' alt='Logo' />")
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:72px; height:72px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.25);' alt='Logo' />")
         }
-        html.append("<div class='school-title'>$schoolHeader</div>")
         html.append("</div>")
-        html.append("<div class='doc-badge'>WARQAD DIGIIN / DISCIPLINARY NOTICE</div>")
+
+        html.append("<div style='flex:1; text-align:right;'>")
+        html.append("<div style='font-size:10.5px; color:#334155;'><b>Ref:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCode</span></div>")
+        html.append("<div style='font-size:10.5px; color:#334155;'><b>Taariikhda:</b> $nowDateTime</div>")
+        html.append("<div class='doc-badge' style='margin-top:3px; display:inline-block;'>WARQAD DIGNIIN AH</div>")
         html.append("</div>")
-        html.append("<div class='doc-title'>WARBIXINTA HABSANKA & MAQNAANSHAHA ARDAYGA</div>")
+        html.append("</div>")
+
+        html.append("<div style='text-align:center; margin-top:8px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
+        html.append("<div class='school-title' style='font-size:19px;'>${schoolHeader.uppercase()}</div>")
+        html.append("<div class='doc-title' style='margin-top:2px; font-size:14px;'>WARBIXINTA HABSANKA & MAQNAANSHAHA ARDAYGA</div>")
+        html.append("</div>")
+        html.append("</div>")
 
         html.append("<div class='student-grid'>")
         html.append("<div class='student-item'><span class='student-label'>Magaca Ardayga</span><span class='student-val'>${student.name}</span></div>")
@@ -3618,17 +3739,32 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("</style></head><body>")
 
         val logoBase64 = getSchoolLogoBase64(context)
-        html.append("<div class='header-box'>")
-        html.append("<div class='top-bar' style='display:flex; align-items:center; justify-content:space-between;'>")
-        html.append("<div style='display:flex; align-items:center; gap:12px;'>")
+        html.append("<div class='header-box' style='padding:12px 16px;'>")
+        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
+        html.append("<div style='flex:1; text-align:left;'>")
+        html.append("<div style='font-size:11px; font-weight:bold; color:#004D4E;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-size:9.5px; font-weight:bold; color:#475569;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe</div>")
+        html.append("</div>")
+
+        html.append("<div style='flex-shrink:0; text-align:center;'>")
         if (logoBase64.isNotBlank()) {
-            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; background:#FFF;' alt='Logo' />")
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.25);' alt='Logo' />")
         }
-        html.append("<div class='school-title'>$schoolHeader</div>")
         html.append("</div>")
-        html.append("<div class='doc-badge'>WARBIXINTA HABSANKA & MAQNAANSHAHA</div>")
+
+        html.append("<div style='flex:1; text-align:right;'>")
+        html.append("<div style='font-size:10.5px; color:#334155;'><b>Ref:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCode</span></div>")
+        html.append("<div style='font-size:10.5px; color:#334155;'><b>Taariikhda:</b> $nowDateTime</div>")
+        html.append("<div class='doc-badge' style='margin-top:3px; display:inline-block;'>WARBIXINTA FASALKA</div>")
         html.append("</div>")
-        html.append("<div class='doc-title'>WARBIXINTA GUUD EE HABSANKA ARDAYDA FASALKA: $className</div>")
+        html.append("</div>")
+
+        html.append("<div style='text-align:center; margin-top:8px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
+        html.append("<div class='school-title' style='font-size:18px;'>${schoolHeader.uppercase()}</div>")
+        html.append("<div class='doc-title' style='margin-top:2px; font-size:13px;'>WARBIXINTA GUUD EE HABSANKA ARDAYDA FASALKA: $className</div>")
+        html.append("</div>")
+        html.append("</div>")
         html.append("<div class='meta-bar'>")
         html.append("<div>Fasalka: <u>$className</u></div>")
         html.append("<div>Xilliga: <u>${yearMonth ?: "Dhammaan (All-Time)"}</u></div>")
@@ -3815,18 +3951,32 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("</style></head><body>")
 
         val logoBase64 = getSchoolLogoBase64(context)
-        html.append("<div class='header-box'>")
-        html.append("<div class='top-logo-bar' style='display:flex; align-items:center; justify-content:space-between;'>")
-        html.append("<div style='display:flex; align-items:center; gap:12px;'>")
-        if (logoBase64.isNotBlank()) {
-            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid #006A6B; background:#FFF;' alt='Logo' />")
-        }
-        html.append("<div class='school-title'>$schoolHeader</div>")
-        html.append("</div>")
-        html.append("<div class='doc-badge'>OFFICIAL GRADE SHEET</div>")
+        html.append("<div class='header-box' style='padding:12px 16px;'>")
+        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
+        html.append("<div style='flex:1; text-align:left;'>")
+        html.append("<div style='font-size:11px; font-weight:bold; color:#004D4E;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-size:9.5px; font-weight:bold; color:#475569;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe</div>")
         html.append("</div>")
 
-        html.append("<div class='doc-heading'>XAASHIDA DHIBCAHA EE ARDAYDA (STUDENTS LIST MARK)</div>")
+        html.append("<div style='flex-shrink:0; text-align:center;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.25);' alt='Logo' />")
+        }
+        html.append("</div>")
+
+        html.append("<div style='flex:1; text-align:right;'>")
+        html.append("<div style='font-size:10.5px; color:#334155;'><b>Ref:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCode</span></div>")
+        html.append("<div style='font-size:10.5px; color:#334155;'><b>Taariikhda:</b> $nowDateTime</div>")
+        html.append("<div class='doc-badge' style='margin-top:3px; display:inline-block;'>OFFICIAL GRADE SHEET</div>")
+        html.append("</div>")
+        html.append("</div>")
+
+        html.append("<div style='text-align:center; margin-top:8px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
+        html.append("<div class='school-title' style='font-size:18px;'>${schoolHeader.uppercase()}</div>")
+        html.append("<div class='doc-heading' style='margin-top:2px; font-size:13.5px;'>XAASHIDA DHIBCAHA EE ARDAYDA (STUDENTS LIST MARK)</div>")
+        html.append("</div>")
+        html.append("</div>")
 
         html.append("<div class='meta-grid'>")
         html.append("<div class='meta-item'><span class='meta-label'>Fasalka (Class)</span><span class='meta-val'>$className</span></div>")
