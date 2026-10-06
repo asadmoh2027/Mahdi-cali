@@ -2171,7 +2171,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         sb.append("<div class='header-side left-side'>")
         sb.append("<div class='side-title'>JAMHUURIYADDA SOMALILAND</div>")
         sb.append("<div class='side-sub'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
-        sb.append("<div class='side-loc'>Dugsiga Hoose / Dhexe ee Gaarka ah</div>")
+        sb.append("<div class='side-loc'>Dugsiga Hoose / Dhexe ee Dawliga ah</div>")
         sb.append("</div>")
 
         // Center Column (Centrally Placed Circular School Emblem)
@@ -3608,7 +3608,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("<div style='flex:1; text-align:left;'>")
         html.append("<div style='font-size:11px; font-weight:bold; color:#004D4E;'>JAMHUURIYADDA SOMALILAND</div>")
         html.append("<div style='font-size:9.5px; font-weight:bold; color:#475569;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
-        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe</div>")
+        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe ee Dawliga ah</div>")
         html.append("</div>")
 
         html.append("<div style='flex-shrink:0; text-align:center;'>")
@@ -3744,7 +3744,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("<div style='flex:1; text-align:left;'>")
         html.append("<div style='font-size:11px; font-weight:bold; color:#004D4E;'>JAMHUURIYADDA SOMALILAND</div>")
         html.append("<div style='font-size:9.5px; font-weight:bold; color:#475569;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
-        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe</div>")
+        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe ee Dawliga ah</div>")
         html.append("</div>")
 
         html.append("<div style='flex-shrink:0; text-align:center;'>")
@@ -3956,7 +3956,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("<div style='flex:1; text-align:left;'>")
         html.append("<div style='font-size:11px; font-weight:bold; color:#004D4E;'>JAMHUURIYADDA SOMALILAND</div>")
         html.append("<div style='font-size:9.5px; font-weight:bold; color:#475569;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
-        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe</div>")
+        html.append("<div style='font-size:9px; color:#64748B;'>Dugsiga Hoose / Dhexe ee Dawliga ah</div>")
         html.append("</div>")
 
         html.append("<div style='flex-shrink:0; text-align:center;'>")
