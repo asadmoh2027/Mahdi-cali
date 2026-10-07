@@ -833,16 +833,43 @@ class SchoolRepository(private val db: SchoolDatabase) {
     }
 
     // --- HTML Print Support ---
+    companion object {
+        private val activeWebViews = java.util.Collections.synchronizedList(mutableListOf<WebView>())
+    }
+
     fun printHtml(context: Context, htmlContent: String, jobName: String) {
-        val webView = WebView(context)
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                val printAdapter = webView.createPrintDocumentAdapter(jobName)
-                printManager?.print(jobName, printAdapter, PrintAttributes.Builder().build())
+        val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        mainHandler.post {
+            try {
+                val webView = WebView(context)
+                activeWebViews.add(webView)
+                webView.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        try {
+                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                            val printAdapter = webView.createPrintDocumentAdapter(jobName)
+                            if (printManager != null) {
+                                printManager.print(jobName, printAdapter, PrintAttributes.Builder().build())
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        } finally {
+                            // Delay removing to allow the print dialog to open and bind to it safely
+                            mainHandler.postDelayed({
+                                try {
+                                    activeWebViews.remove(webView)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }, 60000) // Keep strong reference for 60 seconds
+                        }
+                    }
+                }
+                webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
-        webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
     }
 
     fun printHtmlReport(context: Context, htmlContent: String, jobName: String) = printHtml(context, htmlContent, jobName)

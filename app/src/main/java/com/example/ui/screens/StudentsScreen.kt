@@ -58,6 +58,7 @@ fun StudentsScreen(
     onPrintStudentsListMarkHtml: (Long, String, String, Double, String, String) -> Unit = { _, _, _, _, _, _ -> },
     onExportStudentsListMarkCsv: (Long, String, String, Double) -> Unit = { _, _, _, _ -> },
     onDeleteStudentClick: (Long) -> Unit,
+    onDeleteAllClassStudentsClick: (Long) -> Unit = {},
     onToggleFreeClick: (Long, Boolean) -> Unit = { _, _ -> },
     onPrintStudentReport: (Student) -> Unit = {},
     onBackClick: () -> Unit
@@ -72,6 +73,7 @@ fun StudentsScreen(
     var selectedReportStudent by remember { mutableStateOf<Student?>(null) }
     var profileStudent by remember { mutableStateOf<Student?>(null) }
     var studentToDelete by remember { mutableStateOf<Student?>(null) }
+    var showDeleteAllClassStudentsConfirmDialog by remember { mutableStateOf(false) }
 
     val isAdmin = currentUser == null || currentUser.role == "ADMIN"
     val isCashier = currentUser?.role == "CASHIER"
@@ -306,6 +308,50 @@ fun StudentsScreen(
                                 onClick = { selectedClassId = cls.id },
                                 label = { Text(cls.name, fontSize = 11.sp) }
                             )
+                        }
+                    }
+                }
+            }
+
+            // Delete All Students of Class banner (Admin Only)
+            if (isAdmin && selectedClassId != 0L && filteredStudents.isNotEmpty()) {
+                val currentClass = classes.find { it.id == selectedClassId }
+                val className = currentClass?.name ?: ""
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Maamulida Fasalka '$className'",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FailRed
+                            )
+                            Text(
+                                text = "Waxaad halmar wada tirtiri kartaa dhamaan ardayda ${filteredStudents.size} ee fasalkan.",
+                                fontSize = 10.sp,
+                                color = DarkText
+                            )
+                        }
+                        Button(
+                            onClick = { showDeleteAllClassStudentsConfirmDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = FailRed),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Tirtir Dhamaan", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -767,6 +813,104 @@ fun StudentsScreen(
             dismissButton = {
                 OutlinedButton(
                     onClick = { studentToDelete = null },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Jooji (Cancel)", color = DarkText, fontSize = 12.sp)
+                }
+            }
+        )
+    }
+
+    // Delete All Class Students Confirmation Dialog (Admin only)
+    if (showDeleteAllClassStudentsConfirmDialog) {
+        val currentClass = classes.find { it.id == selectedClassId }
+        val className = currentClass?.name ?: ""
+        
+        AlertDialog(
+            onDismissRequest = { showDeleteAllClassStudentsConfirmDialog = false },
+            icon = {
+                Surface(
+                    shape = CircleShape,
+                    color = FailRed.copy(alpha = 0.15f),
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteForever,
+                            contentDescription = "Warning",
+                            tint = FailRed,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                }
+            },
+            title = {
+                Text(
+                    text = "Tirtir Dhamaan Ardayda Fasalka?",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DarkText,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("🏫 Fasalka: $className", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                            Text("👥 Tirada Ardayda la tirtirayo: ${filteredStudents.size} Arday", fontSize = 12.sp, color = FailRed, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFEBEE)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = FailRed,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Digniin Aad U Culus: Waxaad si rasmi ah u tirtiraysaa DHAMMAAN ardayda ku dhex jirta fasalka '$className'. Tani waxay meesha ka saaraysaa dhammaan xogta buundooyinka, xaadiriska, iyo lacagaha ay bixiyeen ardaydaas. Tallaabadan dib looma noqon karo (Irreversible)!",
+                                fontSize = 11.sp,
+                                color = FailRed,
+                                lineHeight = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteAllClassStudentsClick(selectedClassId)
+                        showDeleteAllClassStudentsConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FailRed),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Haa, Tirtir Dhamaan", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDeleteAllClassStudentsConfirmDialog = false },
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Jooji (Cancel)", color = DarkText, fontSize = 12.sp)

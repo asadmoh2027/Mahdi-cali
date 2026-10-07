@@ -213,7 +213,7 @@ fun PromotionScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("2. Dooro Fasalka loo gudbinayo Ardayda Baastay *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
+                    Text("2. Dooro Fasalka loo gudbinayo Ardayda *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -349,7 +349,7 @@ fun PromotionScreen(
             val targetClassName = classes.find { it.id == selectedTargetClassId }?.name ?: "N/A"
             AlertDialog(
                 onDismissRequest = { showConfirmDialog = false },
-                title = { Text("⚠️ Xaqiiji Gudbinta Ardayda", fontWeight = FontWeight.Bold, color = TealPrimary) },
+                title = { Text("⚠️ Xaqiiji Gudbinta Ardayda Baastay", fontWeight = FontWeight.Bold, color = TealPrimary) },
                 text = {
                     Text(
                         "Ma weydiinaysaa inaad $passedCount arday oo baasay si otomaatig ah ugu gudbiso fasalka '$targetClassName'?\n\n" +
@@ -375,5 +375,6 @@ fun PromotionScreen(
                 }
             )
         }
+
     }
 }

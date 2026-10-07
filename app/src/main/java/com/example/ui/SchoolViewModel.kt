@@ -1778,6 +1778,25 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         }
     }
 
+    fun deleteClassStudents(classId: Long) {
+        if (_currentUser.value?.role != "ADMIN") {
+            viewModelScope.launch {
+                _uiMessage.emit("Permission Denied: Only Administrator can delete students.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            val classStudents = students.value.filter { it.classId == classId }
+            var count = 0
+            classStudents.forEach { s ->
+                repository.deleteStudent(s.id)
+                count++
+            }
+            triggerAutoInternetSync(getApplication(), forceImmediate = true)
+            _uiMessage.emit("Fasalka waa laga saaray dhammaan ardaydii ku jirtay ($count arday)!")
+        }
+    }
+
     fun promoteStudents(studentIdsToPromote: List<Long>, targetClassId: Long, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             var count = 0
@@ -2843,7 +2862,6 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         html.append("</body></html>")
 
-        repository.printHtmlReport(context, html.toString(), "School_Overview_Report")
     }
 
     fun printClassReportHtml(context: Context, selectedClassId: Long) {

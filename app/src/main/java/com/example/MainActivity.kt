@@ -208,6 +208,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel.exportStudentsListMarkCsv(this@MainActivity, classId, subject, examTitle, maxMarks)
                             },
                             onDeleteStudentClick = { id -> viewModel.deleteStudent(id) },
+                            onDeleteAllClassStudentsClick = { classId -> viewModel.deleteClassStudents(classId) },
                             onToggleFreeClick = { id, isFree -> viewModel.toggleStudentFree(id, isFree) },
                             schoolName = schoolName,
                             onPrintStudentReport = { student -> viewModel.printSingleStudentReport(this@MainActivity, student) },
