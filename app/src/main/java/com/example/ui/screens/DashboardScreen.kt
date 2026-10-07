@@ -41,6 +41,11 @@ data class MenuOption(
 fun DashboardScreen(
     user: User?,
     schoolName: String = "Mahdi Cali School",
+    selectedShift: String = "Dhammaan",
+    onShiftSelected: (String) -> Unit = {},
+    classList: List<com.example.data.SchoolClass> = emptyList(),
+    studentList: List<com.example.data.Student> = emptyList(),
+    userList: List<User> = emptyList(),
     onNavigate: (String) -> Unit,
     onLogoutClick: () -> Unit
 ) {
@@ -50,6 +55,26 @@ fun DashboardScreen(
     val isCashier = role == "CASHIER" || role == "ACCOUNTANT"
     val isParent = role == "PARENT"
     val isStudent = role == "STUDENT"
+
+    // Shift counts
+    val morningClasses = classList.count { it.shift.equals("Gelin Hore", ignoreCase = true) }
+    val afternoonClasses = classList.count { it.shift.equals("Gelin Danbe", ignoreCase = true) }
+    val totalClassesCount = classList.size
+
+    val morningStudents = studentList.count { st ->
+        val cls = classList.find { it.id == st.classId }
+        st.shift.equals("Gelin Hore", ignoreCase = true) || cls?.shift?.equals("Gelin Hore", ignoreCase = true) == true
+    }
+    val afternoonStudents = studentList.count { st ->
+        val cls = classList.find { it.id == st.classId }
+        st.shift.equals("Gelin Danbe", ignoreCase = true) || cls?.shift?.equals("Gelin Danbe", ignoreCase = true) == true
+    }
+    val totalStudentsCount = studentList.size
+
+    val teachersList = userList.filter { it.role.contains("TEACHER", ignoreCase = true) || it.role.contains("MACALIN", ignoreCase = true) }
+    val morningTeachers = teachersList.count { it.shift.equals("Gelin Hore", ignoreCase = true) || it.shift.equals("Dhammaan", ignoreCase = true) }
+    val afternoonTeachers = teachersList.count { it.shift.equals("Gelin Danbe", ignoreCase = true) || it.shift.equals("Dhammaan", ignoreCase = true) }
+    val totalTeachersCount = if (teachersList.isNotEmpty()) teachersList.size else classList.map { it.inchargeTeacher }.filter { it.isNotBlank() }.distinct().size
 
     val menuOptions = buildList {
         when {
@@ -159,17 +184,17 @@ fun DashboardScreen(
                 colors = CardDefaults.cardColors(containerColor = TealContainer),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 12.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = TealPrimary,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
@@ -178,21 +203,107 @@ fun DashboardScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Welcome, ${user?.fullName ?: "Admin"}!",
-                            fontSize = 16.sp,
+                            text = "Khatum / Soo Dhawoow, ${user?.fullName ?: "Admin"}!",
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = TealDark
                         )
                         val roleInfo = when (user?.role) {
                             "TEACHER" -> "Teacher Mode • Access Restricted to Permitted Classes"
-                            "CASHIER" -> "Cashier Mode • Fee Register & Financial Management (View All Classes/Students)"
-                            else -> "Administrator • Full System Control"
+                            "CASHIER" -> "Cashier Mode • Fee Register & Financial Management"
+                            else -> "Administrator • Direct Multi-Shift Overview"
                         }
                         Text(
                             text = roleInfo,
                             fontSize = 11.sp,
                             color = DarkText
                         )
+                    }
+                }
+            }
+
+            // Shift Selector Bar
+            com.example.ui.components.ShiftSelectorBar(
+                selectedShift = selectedShift,
+                onShiftSelected = onShiftSelected,
+                morningCount = morningClasses,
+                afternoonCount = afternoonClasses,
+                totalCount = totalClassesCount,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            // Administrator Overview Summary Card (Both Shifts Combined & Individual Breakdown)
+            if (isAdmin) {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "📊 Diiwaanka & Wadarta Labada Shift (Maamulka):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TealDark
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Classes Metric Box
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = TealContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "🏫 FASALADA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "$totalClassesCount", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "☀️$morningClasses | 🌙$afternoonClasses", fontSize = 9.5.sp, color = DarkText)
+                                }
+                            }
+
+                            // Teachers Metric Box
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = TealContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "👨‍🏫 MACALIMIINTA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "$totalTeachersCount", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "☀️$morningTeachers | 🌙$afternoonTeachers", fontSize = 9.5.sp, color = DarkText)
+                                }
+                            }
+
+                            // Students Metric Box
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = TealContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "👨‍🎓 ARDAYDA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "$totalStudentsCount", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "☀️$morningStudents | 🌙$afternoonStudents", fontSize = 9.5.sp, color = DarkText)
+                                }
+                            }
+                        }
                     }
                 }
             }

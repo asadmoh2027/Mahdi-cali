@@ -59,6 +59,14 @@ fun StudentClearanceScreen(
         destinationClass: String,
         academicYear: String
     ) -> Unit,
+    onPrintAllClassClearancesHtml: (
+        context: Context,
+        classId: Long,
+        previousSchool: String,
+        destinationSchool: String,
+        destinationClass: String,
+        academicYear: String
+    ) -> Unit = { _, _, _, _, _, _ -> },
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -247,27 +255,54 @@ fun StudentClearanceScreen(
                                 )
                             }
 
-                            Button(
-                                onClick = {
-                                    if (currentStudent != null) {
-                                        onPrintClearanceHtml(
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Button(
+                                    onClick = {
+                                        if (currentStudent != null) {
+                                            onPrintClearanceHtml(
+                                                context,
+                                                currentStudent,
+                                                previousSchoolInput,
+                                                destinationSchoolInput,
+                                                destinationClassInput,
+                                                academicYearInput
+                                            )
+                                        }
+                                    },
+                                    enabled = currentStudent != null,
+                                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("🖨️ Keli (Single)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                Button(
+                                    onClick = {
+                                        val classId = currentStudent?.classId ?: 0L
+                                        onPrintAllClassClearancesHtml(
                                             context,
-                                            currentStudent,
+                                            classId,
                                             previousSchoolInput,
                                             destinationSchoolInput,
                                             destinationClassInput,
                                             academicYearInput
                                         )
-                                    }
-                                },
-                                enabled = currentStudent != null,
-                                colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("🖨️ PRINT CERTIFICATE / SAVE PDF", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    },
+                                    enabled = currentStudent != null,
+                                    colors = ButtonDefaults.buttonColors(containerColor = TealDark),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("📚 Fasalka (All PDF)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

@@ -36,6 +36,7 @@ data class SchoolClass(
     val startDate: String = "",
     val endDate: String = "",
     val inchargeTeacher: String = "",
+    val shift: String = "Gelin Hore", // "Gelin Hore" (Morning), "Gelin Danbe" (Afternoon)
     val status: String = "ACTIVE", // "ACTIVE", "DELETED"
     val version: Long = 1L,
     val createdAt: String = "",
@@ -53,6 +54,7 @@ data class Student(
     val phone: String = "",
     val classId: Long,
     val academicYearId: String = "2025-2026",
+    val shift: String = "Gelin Hore", // "Gelin Hore" (Morning), "Gelin Danbe" (Afternoon)
     val isFree: Boolean = false, // Fee-exempt / Scholarship student
     val status: String = "ACTIVE", // "ACTIVE", "TRANSFERRED", "DELETED"
     val isDeleted: Boolean = false,
@@ -85,6 +87,7 @@ data class User(
     val fullName: String,
     val role: String = "TEACHER", // ADMIN, TEACHER, CASHIER, SUPER_ADMIN
     val assignedClassIds: String = "", // Comma separated class IDs e.g. "1,2"
+    val shift: String = "Dhammaan", // "Dhammaan", "Gelin Hore", "Gelin Danbe"
     val isLocked: Boolean = false, // If true, user account is disabled by Admin
     val isHidden: Boolean = false, // If true, user account is hidden from UI lists
     val createdAt: String = "",

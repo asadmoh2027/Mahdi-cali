@@ -94,6 +94,51 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     )
     val autoCloudSyncEnabled: StateFlow<Boolean> = _autoCloudSyncEnabled.asStateFlow()
 
+    // --- School Shift / Session State (Gelin Hore / Gelin Danbe / Dhammaan) ---
+    private val _selectedShift = MutableStateFlow(
+        prefs.getString("selected_shift", "Dhammaan") ?: "Dhammaan"
+    )
+    val selectedShift: StateFlow<String> = _selectedShift.asStateFlow()
+
+    fun setSelectedShift(shift: String) {
+        prefs.edit().putString("selected_shift", shift).apply()
+        _selectedShift.value = shift
+    }
+
+    // --- School Facilities / Assets (Agabka Dugsiga) ---
+    private val _classroomsCount = MutableStateFlow(prefs.getInt("asset_classrooms", 12))
+    val classroomsCount: StateFlow<Int> = _classroomsCount.asStateFlow()
+
+    private val _chairsCount = MutableStateFlow(prefs.getInt("asset_chairs", 350))
+    val chairsCount: StateFlow<Int> = _chairsCount.asStateFlow()
+
+    private val _toiletsCount = MutableStateFlow(prefs.getInt("asset_toilets", 10))
+    val toiletsCount: StateFlow<Int> = _toiletsCount.asStateFlow()
+
+    private val _officesCount = MutableStateFlow(prefs.getInt("asset_offices", 4))
+    val officesCount: StateFlow<Int> = _officesCount.asStateFlow()
+
+    private val _kitchenFeedingCount = MutableStateFlow(prefs.getInt("asset_kitchen_feeding", 1))
+    val kitchenFeedingCount: StateFlow<Int> = _kitchenFeedingCount.asStateFlow()
+
+    fun updateSchoolFacilities(classrooms: Int, chairs: Int, toilets: Int, offices: Int, kitchenFeeding: Int) {
+        prefs.edit()
+            .putInt("asset_classrooms", classrooms)
+            .putInt("asset_chairs", chairs)
+            .putInt("asset_toilets", toilets)
+            .putInt("asset_offices", offices)
+            .putInt("asset_kitchen_feeding", kitchenFeeding)
+            .apply()
+        _classroomsCount.value = classrooms
+        _chairsCount.value = chairs
+        _toiletsCount.value = toilets
+        _officesCount.value = offices
+        _kitchenFeedingCount.value = kitchenFeeding
+        viewModelScope.launch {
+            _uiMessage.emit("Agabka Dugsiga waa lagu guuleystay in la xareeyo!")
+        }
+    }
+
     // val isConnected: StateFlow<Boolean> = CloudSync.isConnected
     // val statusMessage: StateFlow<String> = CloudSync.statusMessage
     // val lastSyncTime: StateFlow<String> = CloudSync.lastSyncTime
@@ -935,6 +980,35 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         initialValue = emptyList()
     )
 
+    // Shift-Filtered Classes
+    val displayClasses: StateFlow<List<SchoolClass>> = combine(classes, selectedShift) { list, shift ->
+        if (shift.equals("Dhammaan", ignoreCase = true) || shift.isBlank()) {
+            list
+        } else {
+            list.filter { it.shift.equals(shift, ignoreCase = true) }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // Shift-Filtered Students
+    val displayStudents: StateFlow<List<Student>> = combine(students, classes, selectedShift) { studList, classList, shift ->
+        if (shift.equals("Dhammaan", ignoreCase = true) || shift.isBlank()) {
+            studList
+        } else {
+            studList.filter { student ->
+                val cls = classList.find { it.id == student.classId }
+                student.shift.equals(shift, ignoreCase = true) || cls?.shift?.equals(shift, ignoreCase = true) == true
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     // Filtered Exams
     @OptIn(ExperimentalCoroutinesApi::class)
     val exams: StateFlow<List<Exam>> = combine(permittedClassIds, currentUser) { ids, user ->
@@ -1560,23 +1634,37 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
     }
 
     // --- Entity Actions ---
-    fun addClass(name: String, incharge: String, startDate: String, endDate: String) {
+    fun addClass(name: String, incharge: String, startDate: String, endDate: String, shift: String = "Gelin Hore") {
         if (name.isBlank()) return
         if (_currentUser.value?.role == "TEACHER") {
             viewModelScope.launch { _uiMessage.emit("Permission Denied: Teachers cannot create new classes.") }
             return
         }
+        val cleanShift = if (shift.isNotBlank()) shift else "Gelin Hore"
         viewModelScope.launch {
             repository.insertClass(
                 SchoolClass(
                     name = name.trim(),
                     inchargeTeacher = incharge.trim(),
                     startDate = startDate.trim(),
-                    endDate = endDate.trim()
+                    endDate = endDate.trim(),
+                    shift = cleanShift
                 )
             )
             triggerAutoInternetSync(getApplication(), forceImmediate = true)
-            _uiMessage.emit("Class '$name' created!")
+            _uiMessage.emit("Fasalka '$name' ($cleanShift) waa la sameeyay!")
+        }
+    }
+
+    fun updateClassShift(classId: Long, shift: String) {
+        viewModelScope.launch {
+            val cls = classes.value.find { it.id == classId }
+            if (cls != null) {
+                val updated = cls.copy(shift = shift)
+                repository.updateClass(updated)
+                triggerAutoInternetSync(getApplication(), forceImmediate = true)
+                _uiMessage.emit("Shift-ka fasalka '${cls.name}' waxaa loo beddelay $shift")
+            }
         }
     }
 
@@ -1592,10 +1680,12 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         }
     }
 
-    fun addStudent(name: String, gender: String, motherName: String, phone: String, classId: Long) {
+    fun addStudent(name: String, gender: String, motherName: String, phone: String, classId: Long, shift: String = "") {
         if (name.isBlank()) return
         viewModelScope.launch {
             val autoId = repository.getNextStudentId()
+            val cls = classes.value.find { it.id == classId }
+            val studentShift = if (shift.isNotBlank()) shift else (cls?.shift ?: "Gelin Hore")
             repository.insertStudent(
                 Student(
                     studentId = autoId,
@@ -1603,11 +1693,36 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
                     gender = gender,
                     motherName = motherName.trim(),
                     phone = phone.trim(),
-                    classId = classId
+                    classId = classId,
+                    shift = studentShift
                 )
             )
             triggerAutoInternetSync(getApplication(), forceImmediate = true)
             _uiMessage.emit("Student $autoId ($name) added!")
+        }
+    }
+
+    fun updateStudentShift(studentId: Long, shift: String) {
+        viewModelScope.launch {
+            val st = students.value.find { it.id == studentId }
+            if (st != null) {
+                val updated = st.copy(shift = shift)
+                repository.updateStudent(updated)
+                triggerAutoInternetSync(getApplication(), forceImmediate = true)
+                _uiMessage.emit("Shift-ka ardayga '${st.name}' waxaa loo beddelay $shift")
+            }
+        }
+    }
+
+    fun updateUserShift(userId: Long, shift: String) {
+        viewModelScope.launch {
+            val usr = users.value.find { it.id == userId }
+            if (usr != null) {
+                val updated = usr.copy(shift = shift)
+                repository.updateUser(updated)
+                triggerAutoInternetSync(getApplication(), forceImmediate = true)
+                _uiMessage.emit("Shift-ka shaqaalaha '${usr.fullName}' waxaa loo beddelay $shift")
+            }
         }
     }
 
@@ -2607,6 +2722,118 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         repository.printHtmlReport(context, html.toString(), "Fee_Collection_Report")
     }
 
+    fun printSchoolOverviewReportHtml(context: Context) {
+        val allCls = classes.value
+        val allStuds = students.value
+        val allUsers = users.value
+
+        val totalStudents = allStuds.size
+        val boysCount = allStuds.count { it.gender.equals("Male", ignoreCase = true) || it.gender.equals("Wiil", ignoreCase = true) }
+        val girlsCount = allStuds.count { it.gender.equals("Female", ignoreCase = true) || it.gender.equals("Gabdho", ignoreCase = true) || it.gender.equals("Gabdhaha", ignoreCase = true) }
+        
+        val boysPercent = if (totalStudents > 0) (boysCount.toDouble() / totalStudents) * 100 else 0.0
+        val girlsPercent = if (totalStudents > 0) (girlsCount.toDouble() / totalStudents) * 100 else 0.0
+
+        val totalTeachers = allUsers.count { it.role.equals("TEACHER", ignoreCase = true) || it.role.equals("ADMIN", ignoreCase = true) }.coerceAtLeast(1)
+        val morningTeachers = allUsers.count { (it.role.equals("TEACHER", true) || it.role.equals("ADMIN", true)) && (it.shift.contains("Hore", true) || it.shift.contains("Dhammaan", true)) }
+        val afternoonTeachers = allUsers.count { (it.role.equals("TEACHER", true) || it.role.equals("ADMIN", true)) && (it.shift.contains("Danbe", true) || it.shift.contains("Dhammaan", true)) }
+
+        val classrooms = classroomsCount.value.coerceAtLeast(allCls.size)
+        val chairs = chairsCount.value
+        val toilets = toiletsCount.value
+        val offices = officesCount.value
+        val kitchenFeeding = kitchenFeedingCount.value
+
+        val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
+        val serialCode = generateSerialCode("SCH")
+        val nowDateTime = getCurrentDateTimeStr()
+
+        val html = StringBuilder()
+        html.append("<html><head><style>")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.5; }")
+        html.append(artisticHeaderCss)
+        html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }")
+        html.append("th { background: #006A6B; color: white; padding: 10px; text-align: left; font-size: 13px; font-weight: bold; }")
+        html.append("td { border-bottom: 1px solid #E2E8F0; padding: 8px 10px; font-size: 12px; }")
+        html.append("tr:nth-child(even) { background-color: #F8FAFC; }")
+        html.append(".section-title { color: #006A6B; border-bottom: 2px solid #006A6B; padding-bottom: 4px; margin-top: 22px; margin-bottom: 10px; font-size: 16px; font-weight: bold; }")
+        html.append(".chart-box { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 10px; padding: 16px; margin: 15px 0; }")
+        html.append(".stat-card { display: inline-block; width: 30%; background: #E0F2FE; border-radius: 8px; padding: 12px; margin-right: 2%; text-align: center; box-sizing: border-box; }")
+        html.append(".stat-val { font-size: 22px; font-weight: bold; color: #0369A1; }")
+        html.append(".stat-lbl { font-size: 11px; color: #334155; text-transform: uppercase; margin-top: 4px; }")
+        html.append("</style></head><body>")
+
+        html.append(getArtisticHeaderHtml(
+            context = context,
+            schoolTitle = schoolHeader,
+            reportTitle = "WARBIXINTA GUUD EE DUGSIGA (COMPREHENSIVE SCHOOL REPORT)",
+            serialCode = serialCode,
+            dateStr = nowDateTime,
+            badgeText = "OFFICIAL REPORT"
+        ))
+
+        // Section 1: Agabka Dugsiga (School Facilities & Assets)
+        html.append("<div class='section-title'>1. AGABKA IYO DHISMAHA DUGSIGA (SCHOOL FACILITIES & ASSETS)</div>")
+        html.append("<table>")
+        html.append("<tr><th>#</th><th>Magaca Agabka (Facility Name)</th><th>Tirada / Xaddiga (Quantity)</th><th>Xaaladda (Condition)</th><th>Faahfaahin (Details)</th></tr>")
+        html.append("<tr><td>1</td><td><b>Fasalada Dugsiga (Classrooms)</b></td><td><b>$classrooms Fasal</b></td><td>Working (${allCls.size} Active Classes)</td><td>Fasalada duruustu ka socoto</td></tr>")
+        html.append("<tr><td>2</td><td><b>Kuraasta Ardayda (Chairs / Desks)</b></td><td><b>$chairs Kuraas</b></td><td>Good Condition</td><td>Kuraasta & miisaska fadhiga ardayda</td></tr>")
+        html.append("<tr><td>3</td><td><b>Musqulaha (Toilets / Restrooms)</b></td><td><b>$toilets Musqulro</b></td><td>Clean & Functional</td><td>Musqulaha ardayda iyo shaqaalaha</td></tr>")
+        html.append("<tr><td>4</td><td><b>Xafiisyada Dugsiga (Admin Offices)</b></td><td><b>$offices Xafiis</b></td><td>Fully Equipped</td><td>Xafiisyada maamulka iyo macalimiinta</td></tr>")
+        html.append("<tr><td>5</td><td><b>Jikada Cuntada (Kitchen Feeding Program)</b></td><td><b>$kitchenFeeding Jiko</b></td><td>Operational</td><td>Jikada bixisa cuntada bilaashka ah ee ardayda</td></tr>")
+        html.append("</table>")
+
+        // Section 2: Macalimiinta Iyo Shaqaalaha
+        html.append("<div class='section-title'>2. MACALIMIINTA IYO SHAQAALAHA (TEACHERS & STAFF SUMMARY)</div>")
+        html.append("<div style='margin-bottom: 12px;'>")
+        html.append("<div class='stat-card'><div class='stat-val'>$totalTeachers</div><div class='stat-lbl'>Wadarta Macalimiinta</div></div>")
+        html.append("<div class='stat-card' style='background:#DCFCE7;'><div class='stat-val' style='color:#15803D;'>$morningTeachers</div><div class='stat-lbl'>Gelin Hore (Morning)</div></div>")
+        html.append("<div class='stat-card' style='background:#FEF3C7;'><div class='stat-val' style='color:#B45309;'>$afternoonTeachers</div><div class='stat-lbl'>Gelin Danbe (Afternoon)</div></div>")
+        html.append("</div>")
+
+        // Section 3: Ardayda Iyo Garaafka Wiilasha & Gabdhaha
+        html.append("<div class='section-title'>3. DEMOGRAPHICS ARDAYDA IYO GARAAFAKA (STUDENT DEMOGRAPHICS & GENDER GRAPH)</div>")
+        
+        val boysPctFormatted = String.format(java.util.Locale.US, "%.1f", boysPercent)
+        val girlsPctFormatted = String.format(java.util.Locale.US, "%.1f", girlsPercent)
+
+        html.append("<div class='chart-box'>")
+        html.append("<div style='display:flex; justify-content:space-between; font-size:14px; font-weight:bold; margin-bottom:8px;'>")
+        html.append("<span>👦 Wiilasha (Boys): $boysCount ($boysPctFormatted%)</span>")
+        html.append("<span>👧 Gabdhaha (Girls): $girlsCount ($girlsPctFormatted%)</span>")
+        html.append("</div>")
+        html.append("<div style='display:flex; height:28px; border-radius:14px; overflow:hidden; border:1px solid #94A3B8; background:#E2E8F0;'>")
+        html.append("<div style='width:${boysPercent}%; background:linear-gradient(90deg, #0284C7, #0369A1); color:white; text-align:center; font-size:12px; font-weight:bold; line-height:28px;'>$boysPctFormatted% Boys</div>")
+        html.append("<div style='width:${girlsPercent}%; background:linear-gradient(90deg, #D946EF, #A21CAF); color:white; text-align:center; font-size:12px; font-weight:bold; line-height:28px;'>$girlsPctFormatted% Girls</div>")
+        html.append("</div>")
+        html.append("<div style='margin-top:10px; font-size:12px; color:#475569; text-align:center;'>Wadarta Guud ee Ardayda Dugsiga Rejabsan: <b>$totalStudents Arday</b></div>")
+        html.append("</div>")
+
+        // Class-by-Class Breakdown Table
+        html.append("<h4 style='color:#006A6B; margin-top:15px; margin-bottom:6px;'>Tirada Ardayda Fasal Kasta (Class-by-Class Boys & Girls Breakdown)</h4>")
+        html.append("<table>")
+        html.append("<tr><th>#</th><th>Fasalka (Class Name)</th><th>Shift-ka</th><th>👦 Wiilal</th><th>👧 Gabdho</th><th>Wadarta (Total)</th></tr>")
+        allCls.forEachIndexed { index, cls ->
+            val classStudents = allStuds.filter { it.classId == cls.id }
+            val cBoys = classStudents.count { it.gender.equals("Male", ignoreCase = true) || it.gender.equals("Wiil", ignoreCase = true) }
+            val cGirls = classStudents.count { it.gender.equals("Female", ignoreCase = true) || it.gender.equals("Gabdho", ignoreCase = true) || it.gender.equals("Gabdhaha", ignoreCase = true) }
+            val cTotal = classStudents.size
+            html.append("<tr><td>${index + 1}</td><td><b>${cls.name}</b></td><td>${cls.shift}</td><td>$cBoys</td><td>$cGirls</td><td><b>$cTotal</b></td></tr>")
+        }
+        html.append("<tr style='background:#E2E8F0; font-weight:bold;'><td>-</td><td>WADARTA GUUD</td><td>-</td><td>$boysCount</td><td>$girlsCount</td><td>$totalStudents</td></tr>")
+        html.append("</table>")
+
+        // Signatures
+        html.append("<div style='margin-top: 40px; display: flex; justify-content: space-between;'>")
+        html.append("<div><b>Incharge Officer:</b><br/><br/>______________________<br/>Taariikh: $nowDateTime</div>")
+        html.append("<div><b>Maamulaha Dugsiga (Principal):</b><br/><br/>______________________<br/>Saaniyo & Shaambad</div>")
+        html.append("</div>")
+
+        html.append("</body></html>")
+
+        repository.printHtmlReport(context, html.toString(), "School_Overview_Report")
+    }
+
     fun printClassReportHtml(context: Context, selectedClassId: Long) {
         val targetClasses = if (selectedClassId == 0L) classes.value else classes.value.filter { it.id == selectedClassId }
         val allStuds = students.value
@@ -3161,6 +3388,524 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("</div></body></html>")
 
         repository.printHtmlReport(context, html.toString(), "Student_Marksheet_${student.studentId}")
+    }
+
+    fun printAllClassMarksheetsHtml(
+        context: Context,
+        classId: Long,
+        academicYear: String,
+        destinationClass: String
+    ) {
+        val targetClasses = if (classId != 0L) {
+            classes.value.filter { it.id == classId }
+        } else {
+            classes.value
+        }
+        val targetStudents = students.value.filter { s -> targetClasses.any { it.id == s.classId } && s.status == "ACTIVE" }
+
+        if (targetStudents.isEmpty()) {
+            viewModelScope.launch { _uiMessage.emit("Arday ma joogaan fasalka la doortay.") }
+            return
+        }
+
+        val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
+        val logoBase64 = getSchoolLogoBase64(context)
+        val nowDateTimeMSK = getCurrentDateTimeStr()
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 12mm; }")
+        html.append("@media print { .page-break { page-break-after: always; break-after: page; } }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 5px; color: #102A2A; font-size: 12px; }")
+        html.append(".document-container { border: 2px solid #006A6B; padding: 15px; border-radius: 6px; box-sizing: border-box; }")
+        html.append(".header-box { text-align: center; border: 1.5px solid #006A6B; padding: 10px; border-radius: 4px; background: #FAFDFD; margin-bottom: 12px; }")
+        html.append(".school-title { font-size: 18px; font-weight: 800; color: #006A6B; margin: 4px 0 6px 0; text-transform: uppercase; }")
+        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 15px; font-weight: bold; padding: 5px 22px; display: inline-block; border-radius: 4px; letter-spacing: 1px; }")
+        html.append(".sec-title { font-size: 12px; font-weight: bold; color: #006A6B; margin: 12px 0 6px 0; text-transform: uppercase; border-bottom: 2px solid #006A6B; padding-bottom: 3px; }")
+        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1px solid #CBD5E1; }")
+        html.append(".info-table td { padding: 6px 10px; border: 1px solid #E2E8F0; font-size: 11px; }")
+        html.append(".info-label { font-weight: bold; color: #475569; width: 40%; background: #F8FAFC; }")
+        html.append(".info-value { font-weight: bold; color: #0F172A; }")
+        html.append(".marks-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1.5px solid #006A6B; font-size: 11px; }")
+        html.append(".marks-table th { background: #006A6B; color: white; padding: 7px; text-align: center; font-weight: bold; }")
+        html.append(".marks-table td { border: 1px solid #CBD5E1; padding: 6px; text-align: center; }")
+        html.append(".marks-table td.sub-name { text-align: left; font-weight: bold; color: #1E293B; }")
+        html.append(".marks-table tr.summary-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 1.5px solid #006A6B; }")
+        html.append(".result-box-pass { background: #E8F5E9; border: 1.5px solid #2E7D32; border-radius: 6px; padding: 12px; margin-bottom: 12px; color: #1B5E20; }")
+        html.append(".result-box-fail { background: #FFEBEE; border: 1.5px solid #C62828; border-radius: 6px; padding: 12px; margin-bottom: 12px; color: #B71C1C; }")
+        html.append(".result-head { font-size: 14px; font-weight: bold; margin-bottom: 4px; }")
+        html.append(".result-body { font-size: 11px; line-height: 1.5; }")
+        html.append(".footer-section { margin-top: 20px; border: 1px solid #CBD5E1; border-radius: 4px; padding: 12px; background: #FAFDFD; page-break-inside: avoid; }")
+        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 11px; font-weight: bold; }")
+        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 10px; color: #64748B; }")
+        html.append("</style></head><body>")
+
+        val activeSubjects = listOf("Diinta Islaamka", "Af-Soomaali", "Xisaab", "Saynis", "Cilmiga Bulshada", "English", "Carabi")
+        val allExs = exams.value
+        val allMrs = allExamMarks.value
+
+        fun fmt(n: Double) = if (n % 1.0 == 0.0) n.toInt().toString() else String.format(java.util.Locale.US, "%.1f", n)
+
+        targetStudents.forEachIndexed { index, student ->
+            val currentCls = classes.value.find { it.id == student.classId }
+            val currentClassName = currentCls?.name ?: "N/A"
+            val serialCodeMSK = generateSerialCode("MSK")
+
+            html.append("<div class='document-container'>")
+            html.append("<div class='header-box' style='padding:10px 14px; margin-bottom:12px;'>")
+            html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
+            html.append("<div style='flex:1; text-align:left; font-size:10px; line-height:1.3;'>")
+            html.append("<div style='font-weight:bold; color:#004D4E; font-size:10.5px;'>JAMHUURIYADDA SOMALILAND</div>")
+            html.append("<div style='font-weight:bold; color:#475569; font-size:9.5px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+            html.append("<div style='color:#64748B; font-size:9px;'>Imtixaanka Sanad-Dugsiyeedka</div>")
+            html.append("</div>")
+
+            html.append("<div style='flex-shrink:0; text-align:center;'>")
+            if (logoBase64.isNotBlank()) {
+                html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.2);' alt='Logo' />")
+            }
+            html.append("</div>")
+
+            html.append("<div style='flex:1; text-align:right; font-size:10px; line-height:1.3;'>")
+            html.append("<div style='color:#334155;'><b>Tixraac:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCodeMSK</span></div>")
+            html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTimeMSK</div>")
+            html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:2px 8px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:2px;'>OFFICIAL MARKSHEET</div>")
+            html.append("</div>")
+            html.append("</div>")
+
+            html.append("<div style='text-align:center; margin-top:6px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
+            html.append("<div class='school-title' style='margin:0 0 3px 0; font-size:18px;'>${schoolHeader.uppercase()}</div>")
+            html.append("<div class='doc-banner' style='font-size:13px; padding:3px 18px;'>STUDENT MARKSHEET (WARBIXINTA DHIBCAHA)</div>")
+            html.append("</div>")
+            html.append("</div>")
+
+            html.append("<div class='sec-title'>1. STUDENT PROFILE (XOGTA ARDAYGA)</div>")
+            html.append("<table class='info-table'>")
+            html.append("<tr><td class='info-label'>Magaca Ardayga oo Dhamaystiran:</td><td class='info-value'>${student.name}</td></tr>")
+            html.append("<tr><td class='info-label'>Magaca Hooyada:</td><td class='info-value'>${student.motherName.ifBlank { "N/A" }}</td></tr>")
+            html.append("<tr><td class='info-label'>Student ID / Roll Number:</td><td class='info-value'>${student.studentId}</td></tr>")
+            html.append("<tr><td class='info-label'>Gender:</td><td class='info-value'>${student.gender}</td></tr>")
+            html.append("<tr><td class='info-label'>Mobilka Waalidka:</td><td class='info-value'>${student.phone.ifBlank { "N/A" }}</td></tr>")
+            html.append("<tr><td class='info-label'>Fasalka:</td><td class='info-value'>$currentClassName</td></tr>")
+            html.append("<tr><td class='info-label'>Sanad-Dugsiyeedka:</td><td class='info-value'>$academicYear</td></tr>")
+            html.append("<tr><td class='info-label'>Magaca Dugsiga:</td><td class='info-value'>$schoolHeader</td></tr>")
+            html.append("<tr><td class='info-label'>Fasalka uu u Gudbayo:</td><td class='info-value'>$destinationClass</td></tr>")
+            html.append("</table>")
+
+            html.append("<div class='sec-title'>2. IMTIXAANKA SANAD DUGSIYEEDKA (Mark Max: 50 | Pass: 25 per Term)</div>")
+            html.append("<table class='marks-table'>")
+            html.append("<thead><tr><th style='text-align:left;'>Maadada</th><th>Teeramka 1aad (Max: 50)</th><th>Teeramka 2aad (Max: 50)</th><th>Wadarta (/100)</th><th>Celceliska</th><th style='text-align:right;'>Natiijada</th></tr></thead>")
+            html.append("<tbody>")
+
+            var grandTotal = 0.0
+            var validCount = 0
+
+            activeSubjects.forEach { subName ->
+                val studentMarks = allMrs.filter { it.studentId == student.id && !it.isAbsent }
+                val subLower = subName.lowercase()
+
+                fun getTermScore(isT2: Boolean): Double? {
+                    val match = studentMarks.mapNotNull { mark ->
+                        val exam = allExs.find { it.id == mark.examId }
+                        if (exam != null) {
+                            val text = (exam.name + " " + exam.subject).lowercase()
+                            val examIsTerm2 = text.contains("term 2") || text.contains("term2") || text.contains("t2") || text.contains("sem 2") || text.contains("final") || text.contains("2nd") || text.contains("teeramka 2")
+                            val isCorrectTerm = if (isT2) examIsTerm2 else !examIsTerm2
+                            val subClean = cleanExamSubjectName(exam.subject.ifBlank { exam.name }).lowercase()
+                            val targetClean = subLower
+                            val matchesSubject = subClean == targetClean || subClean.contains(targetClean) || targetClean.contains(subClean) || text.contains(targetClean)
+                            if (isCorrectTerm && matchesSubject) Pair(mark, exam) else null
+                        } else null
+                    }.firstOrNull()
+
+                    if (match != null) {
+                        var sc = match.first.score
+                        if (match.second.totalMarks == 100.0 && sc > 50.0) sc /= 2.0
+                        return sc.coerceAtMost(50.0)
+                    }
+                    return null
+                }
+
+                val t1Val = getTermScore(false)
+                val t2Val = getTermScore(true)
+
+                val totVal = if (t1Val != null || t2Val != null) (t1Val ?: 0.0) + (t2Val ?: 0.0) else null
+                val avgVal = if (t1Val != null && t2Val != null) totVal!! / 2.0 else totVal
+
+                if (totVal != null) {
+                    grandTotal += totVal
+                    validCount++
+                }
+
+                val t1Str = t1Val?.let { fmt(it) } ?: "&nbsp;"
+                val t2Str = t2Val?.let { fmt(it) } ?: "&nbsp;"
+                val totStr = totVal?.let { fmt(it) } ?: "&nbsp;"
+                val avgStr = avgVal?.let { fmt(it) } ?: "&nbsp;"
+                val resStr = when {
+                    totVal == null -> "&nbsp;"
+                    (totVal ?: 0.0) >= 50.0 || (avgVal ?: 0.0) >= 25.0 -> "<span style='color:#2E7D32; font-weight:bold;'>BAASAY</span>"
+                    else -> "<span style='color:#C62828; font-weight:bold;'>DHACAY</span>"
+                }
+
+                html.append("<tr><td class='sub-name'>$subName</td><td>$t1Str</td><td>$t2Str</td><td style='font-weight:bold;'>$totStr</td><td>$avgStr</td><td style='text-align:right;'>$resStr</td></tr>")
+            }
+
+            val maxPossible = if (validCount > 0) validCount * 100.0 else 700.0
+            val overallPct = if (maxPossible > 0) (grandTotal / maxPossible) * 100.0 else 0.0
+            val passThreshold = (validCount * 50.0).coerceAtLeast(175.0)
+            val isPassed = grandTotal >= passThreshold || overallPct >= 50.0
+
+            val grade = when {
+                overallPct >= 90 -> "A"
+                overallPct >= 80 -> "B"
+                overallPct >= 70 -> "C"
+                overallPct >= 50 -> "D"
+                else -> "F"
+            }
+
+            html.append("<tr class='summary-row'><td class='sub-name'>Total Marks (Wadarta Guud)</td><td colspan='4' style='text-align:right;'><b>${fmt(grandTotal)} / ${activeSubjects.size * 100}</b></td><td>&nbsp;</td></tr>")
+            html.append("<tr class='summary-row'><td class='sub-name'>Average (Celceliska Guud)</td><td colspan='4' style='text-align:right;'><b>${String.format(java.util.Locale.US, "%.1f%%", overallPct)}</b></td><td>&nbsp;</td></tr>")
+            html.append("<tr class='summary-row'><td class='sub-name'>Grade</td><td colspan='4' style='text-align:right;'><b>$grade</b></td><td>&nbsp;</td></tr>")
+            html.append("<tr class='summary-row'><td class='sub-name'>Status (Natiijada)</td><td colspan='4' style='text-align:right;'><b>${if (isPassed) "<span style='color:#2E7D32;'>BAASAY</span>" else "<span style='color:#C62828;'>DHACAY</span>"}</b></td><td>&nbsp;</td></tr>")
+            html.append("<tr class='summary-row'><td class='sub-name'>Fasalka uu u Gudbayo</td><td colspan='4' style='text-align:right;'><b>$destinationClass</b></td><td>&nbsp;</td></tr>")
+
+            html.append("</tbody></table>")
+
+            html.append("<div class='sec-title'>3. NATIIJADA ARDAYGA</div>")
+            if (isPassed) {
+                html.append("<div class='result-box-pass'>")
+                html.append("<div class='result-head'>🎉 HAMBALYO!</div>")
+                html.append("<div class='result-body'>“Waxaan kuu hambalyaynaynaa guusha aad ka gaadhay imtixaanka sanad-dugsiyeedka. Dadaalkaaga iyo horumarkaaga sii wad, kuna dadaal inaad mar kasta gaadho heer ka sarreeya.”</div>")
+                html.append("</div>")
+            } else {
+                html.append("<div class='result-box-fail'>")
+                html.append("<div class='result-head'>📌 DARDARAN IYO DHIIRIGELIN</div>")
+                html.append("<div class='result-body'>“Ha niyad jabin. Guuldarradu ma aha dhammaadka waxbarashada, ee waa fursad aad ku ogaan karto meelaha aad u baahan tahay inaad ku dadaasho. Dib u eeg casharradaada, dadaalka kordhi, waqtiga si wanaagsan uga faa’iidayso, waxaana rajaynaynaa inaad sannadka dambe guul weyn gaadho.”</div>")
+                html.append("</div>")
+            }
+
+            html.append("<div class='footer-section'>")
+            html.append("<div class='sig-row'><div>Magaca Maamulaha: ______________________</div><div>Saxeexa Maamulaha: ______________________</div></div>")
+            html.append("<div class='stamp-row'><div>Taariikhda & Waqtiga: $nowDateTimeMSK</div><div>Serial Code: $serialCodeMSK</div></div>")
+            html.append("</div></div>")
+
+            if (index < targetStudents.size - 1) {
+                html.append("<div class='page-break'></div>")
+            }
+        }
+
+        html.append("</body></html>")
+        val clsName = targetClasses.firstOrNull()?.name?.replace(" ", "_") ?: "All_Classes"
+        repository.printHtmlReport(context, html.toString(), "All_Marksheets_$clsName")
+    }
+
+    fun printAllClassClearancesHtml(
+        context: Context,
+        classId: Long,
+        previousSchool: String,
+        destinationSchool: String,
+        destinationClass: String,
+        academicYear: String
+    ) {
+        val targetClasses = if (classId != 0L) {
+            classes.value.filter { it.id == classId }
+        } else {
+            classes.value
+        }
+        val targetStudents = students.value.filter { s -> targetClasses.any { it.id == s.classId } && s.status == "ACTIVE" }
+
+        if (targetStudents.isEmpty()) {
+            viewModelScope.launch { _uiMessage.emit("Arday ma joogaan fasalka la doortay.") }
+            return
+        }
+
+        val logoBase64 = getSchoolLogoBase64(context)
+        val nowDateTimeCLR = getCurrentDateTimeStr()
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 10mm; }")
+        html.append("@media print { .page-break { page-break-after: always; break-after: page; } }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 5px; color: #102A2A; font-size: 12px; }")
+        html.append(".document-container { border: 2px solid #006A6B; padding: 12px; border-radius: 6px; box-sizing: border-box; }")
+        html.append(".header-box { text-align: center; border: 1.5px solid #006A6B; padding: 8px; border-radius: 4px; background: #FAFDFD; margin-bottom: 10px; }")
+        html.append(".school-title { font-size: 16px; font-weight: 800; color: #006A6B; margin: 3px 0 6px 0; text-transform: uppercase; }")
+        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 14px; font-weight: bold; padding: 4px 18px; display: inline-block; border-radius: 4px; letter-spacing: 1px; }")
+        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1px solid #CBD5E1; }")
+        html.append(".info-table td { padding: 5px 8px; border: 1px solid #E2E8F0; font-size: 11px; }")
+        html.append(".info-label { font-weight: bold; color: #475569; width: 42%; background: #F8FAFC; }")
+        html.append(".info-value { font-weight: bold; color: #0F172A; }")
+        html.append(".section-title { font-size: 11px; font-weight: bold; color: #006A6B; margin-bottom: 8px; text-transform: uppercase; border-bottom: 2px solid #006A6B; padding-bottom: 3px; }")
+        html.append(".boxes-grid { width: 100%; display: table; table-layout: fixed; border-spacing: 8px; margin-bottom: 10px; }")
+        html.append(".box-row { display: table-row; }")
+        html.append(".class-box { display: table-cell; width: 50%; vertical-align: top; border: 1.5px solid #006A6B; border-radius: 4px; overflow: hidden; background: #FFFFFF; box-sizing: border-box; }")
+        html.append(".box-header { background: #006A6B; color: #FFFFFF; font-weight: bold; text-align: center; padding: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }")
+        html.append(".box-content { padding: 4px; }")
+        html.append(".sub-table { width: 100%; border-collapse: collapse; font-size: 9px; text-align: center; }")
+        html.append(".sub-table th { background: #E6F2F2; color: #004D4E; padding: 3px 2px; border-bottom: 1px solid #CBD5E1; font-weight: bold; }")
+        html.append(".sub-table td { padding: 2px 3px; border-bottom: 1px solid #E2E8F0; }")
+        html.append(".sub-table td.sub-name { text-align: left; font-weight: 500; color: #1E293B; }")
+        html.append(".sub-table tr.tot-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 1px solid #006A6B; }")
+        html.append(".footer-section { margin-top: 15px; border: 1px solid #CBD5E1; border-radius: 4px; padding: 10px; background: #FAFDFD; page-break-inside: avoid; }")
+        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 10px; font-weight: bold; }")
+        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 9px; color: #64748B; }")
+        html.append("</style></head><body>")
+
+        val standardSubjects = listOf("Diinta Islaamka", "Af-Soomaali", "Xisaab", "Saynis", "Cilmiga Bulshada", "English", "Carabi")
+        val allCls = classes.value
+        val allExs = exams.value
+        val allMrs = allExamMarks.value
+
+        fun fmt(n: Double) = if (n % 1.0 == 0.0) n.toInt().toString() else String.format(java.util.Locale.US, "%.1f", n)
+
+        targetStudents.forEachIndexed { index, student ->
+            val currentCls = allCls.find { it.id == student.classId }
+            val currentClassName = currentCls?.name ?: "N/A"
+            val schoolHeader = previousSchool.ifBlank { schoolName.value.ifBlank { "Mahdi Cali School" } }
+            val serialCodeCLR = generateSerialCode("CLR")
+
+            html.append("<div class='document-container'>")
+            html.append("<div class='header-box' style='padding:10px 14px; margin-bottom:12px;'>")
+            html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
+            html.append("<div style='flex:1; text-align:left; font-size:10px; line-height:1.3;'>")
+            html.append("<div style='font-weight:bold; color:#004D4E; font-size:10.5px;'>JAMHUURIYADDA SOMALILAND</div>")
+            html.append("<div style='font-weight:bold; color:#475569; font-size:9.5px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+            html.append("<div style='color:#64748B; font-size:9px;'>Agaasinka Waxbarashada Guud</div>")
+            html.append("</div>")
+
+            html.append("<div style='flex-shrink:0; text-align:center;'>")
+            if (logoBase64.isNotBlank()) {
+                html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.2);' alt='Logo' />")
+            }
+            html.append("</div>")
+
+            html.append("<div style='flex:1; text-align:right; font-size:10px; line-height:1.3;'>")
+            html.append("<div style='color:#334155;'><b>Tixraac:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCodeCLR</span></div>")
+            html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTimeCLR</div>")
+            html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:2px 8px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:2px;'>OFFICIAL CERTIFICATE</div>")
+            html.append("</div>")
+            html.append("</div>")
+
+            html.append("<div style='text-align:center; margin-top:6px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
+            html.append("<div class='school-title' style='margin:0 0 3px 0; font-size:18px;'>${schoolHeader.uppercase()}</div>")
+            html.append("<div class='doc-banner' style='font-size:13px; padding:3px 18px;'>WARQADDA ARDAYGA (CLEARANCE & RECORD SHEET)</div>")
+            html.append("</div>")
+            html.append("</div>")
+
+            html.append("<table class='info-table'>")
+            html.append("<tr><td class='info-label'>1. Magaca Ardayga oo Dhamaystiran:</td><td class='info-value'>${student.name}</td></tr>")
+            html.append("<tr><td class='info-label'>2. Magaca Hooyada:</td><td class='info-value'>${student.motherName.ifBlank { "N/A" }}</td></tr>")
+            html.append("<tr><td class='info-label'>3. Fasalka uu Ku Jiray:</td><td class='info-value'>$currentClassName</td></tr>")
+            html.append("<tr><td class='info-label'>4. Dugsiga uu Ku Jiray:</td><td class='info-value'>$schoolHeader</td></tr>")
+            html.append("<tr><td class='info-label'>5. Dugsiga loo Beddelay:</td><td class='info-value'>$destinationSchool</td></tr>")
+            html.append("<tr><td class='info-label'>6. Fasalka uu u Gudbay:</td><td class='info-value'>$destinationClass</td></tr>")
+            html.append("<tr><td class='info-label'>7. Sanad-Dugsyeedka:</td><td class='info-value'>$academicYear</td></tr>")
+            html.append("</table>")
+
+            html.append("<div class='section-title'>DIIWAANKA SANNADAHA / FASALLADA (FASALLADA 1AAD - 4AAD)</div>")
+            html.append("<div class='boxes-grid'>")
+
+            (1..4).chunked(2).forEach { pair ->
+                html.append("<div class='box-row'>")
+                pair.forEach { boxIdx ->
+                    val matchingClass = allCls.find { cls ->
+                        val digits = cls.name.filter { it.isDigit() }
+                        val num = digits.toIntOrNull()
+                        if (num != null) num == boxIdx
+                        else {
+                            val nameLower = cls.name.lowercase()
+                            nameLower.contains("fasalka $boxIdx") || nameLower.contains("class $boxIdx") || nameLower.contains("grade $boxIdx") || nameLower.contains("$boxIdx")
+                        }
+                    }
+                    val classExams = if (matchingClass != null) allExs.filter { it.classId == matchingClass.id } else emptyList()
+
+                    html.append("<div class='class-box'>")
+                    html.append("<div class='box-header'>Fasalka ${boxIdx}aad (Class $boxIdx)</div>")
+                    html.append("<div class='box-content'>")
+                    html.append("<table class='sub-table'><thead><tr><th style='text-align:left;'>Maadada</th><th>T1</th><th>T2</th><th>Wadar</th></tr></thead><tbody>")
+
+                    var totT1 = 0.0
+                    var totT2 = 0.0
+                    standardSubjects.forEach { sub ->
+                        fun getMarkVal(isT2: Boolean): Double? {
+                            val matchedClassExam = classExams.find { exam ->
+                                val text = (exam.name + " " + exam.subject).lowercase()
+                                val examIsTerm2 = text.contains("term 2") || text.contains("term2") || text.contains("t2") || text.contains("sem 2") || text.contains("final")
+                                val isCorrectTerm = if (isT2) examIsTerm2 else !examIsTerm2
+                                val subClean = cleanExamSubjectName(exam.subject.ifBlank { exam.name }).lowercase()
+                                val targetClean = sub.lowercase()
+                                val matchesSubject = subClean == targetClean || subClean.contains(targetClean) || text.contains(targetClean)
+                                isCorrectTerm && matchesSubject
+                            }
+                            if (matchedClassExam != null) {
+                                val mark = allMrs.find { it.examId == matchedClassExam.id && it.studentId == student.id && !it.isAbsent }
+                                if (mark != null) {
+                                    var score = mark.score
+                                    if (matchedClassExam.totalMarks == 100.0 && score > 50.0) score /= 2.0
+                                    return score.coerceAtMost(50.0)
+                                }
+                            }
+                            return null
+                        }
+
+                        val t1Val = getMarkVal(false)
+                        val t2Val = getMarkVal(true)
+                        if (t1Val != null) totT1 += t1Val
+                        if (t2Val != null) totT2 += t2Val
+
+                        val t1S = t1Val?.let { fmt(it) } ?: ""
+                        val t2S = t2Val?.let { fmt(it) } ?: ""
+                        val totS = if (t1Val != null || t2Val != null) fmt((t1Val ?: 0.0) + (t2Val ?: 0.0)) else ""
+
+                        html.append("<tr><td class='sub-name'>$sub</td><td>$t1S</td><td>$t2S</td><td style='font-weight:bold;'>$totS</td></tr>")
+                    }
+
+                    val grandTotS = fmt(totT1 + totT2)
+                    html.append("<tr class='tot-row'><td class='sub-name'>Wadarta Guud</td><td>${fmt(totT1)}</td><td>${fmt(totT2)}</td><td>$grandTotS</td></tr>")
+                    html.append("</tbody></table></div></div>")
+                }
+                html.append("</div>")
+            }
+            html.append("</div>")
+
+            html.append("<div class='footer-section'>")
+            html.append("<div class='sig-row'><div>Saxeexa Maamulaha: ______________________</div><div>Saxeexa Kormeeraha: ______________________</div></div>")
+            html.append("<div class='stamp-row'><div>Taariikhda: $nowDateTimeCLR</div><div>Serial: $serialCodeCLR</div></div>")
+            html.append("</div></div>")
+
+            if (index < targetStudents.size - 1) {
+                html.append("<div class='page-break'></div>")
+            }
+        }
+
+        html.append("</body></html>")
+        val clsName = targetClasses.firstOrNull()?.name?.replace(" ", "_") ?: "All_Classes"
+        repository.printHtmlReport(context, html.toString(), "All_Clearances_$clsName")
+    }
+
+    fun printAllStudentsComprehensiveReportsHtml(context: Context, classId: Long) {
+        val targetClasses = if (classId != 0L) {
+            classes.value.filter { it.id == classId }
+        } else {
+            classes.value
+        }
+        val targetStudents = students.value.filter { s -> targetClasses.any { it.id == s.classId } && s.status == "ACTIVE" }
+
+        if (targetStudents.isEmpty()) {
+            viewModelScope.launch { _uiMessage.emit("Arday ma joogaan fasalka la doortay.") }
+            return
+        }
+
+        val schoolHeader = schoolName.value.ifBlank { "MAHDI CALI SCHOOL" }
+        val nowDateTime = getCurrentDateTimeStr()
+        val allExamsList = exams.value
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 12mm; }")
+        html.append("@media print { .page-break { page-break-after: always; break-after: page; } }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1E293B; background: #FFF; line-height: 1.5; }")
+        html.append(artisticHeaderCss)
+        html.append(".section-title { font-size: 13px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 4px solid #006A6B; padding-left: 8px; margin: 18px 0 8px 0; }")
+        html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px; }")
+        html.append(".info-item { margin-bottom: 4px; }")
+        html.append(".badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }")
+        html.append(".badge-free { background: #FEF3C7; color: #B45309; border: 1px solid #F59E0B; }")
+        html.append(".badge-pass { background: #DCFCE7; color: #15803D; }")
+        html.append("table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }")
+        html.append("th { background: #006A6B; color: #FFFFFF; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: bold; }")
+        html.append("td { border-bottom: 1px solid #E2E8F0; padding: 8px 10px; font-size: 11px; color: #334155; }")
+        html.append(".kpi-row { display: flex; gap: 10px; margin: 10px 0; }")
+        html.append(".kpi-card { flex: 1; background: #F1F5F9; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #CBD5E1; }")
+        html.append(".kpi-val { font-size: 16px; font-weight: 800; color: #006A6B; margin-top: 2px; }")
+        html.append(".kpi-lbl { font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; }")
+        html.append(".signatures { display: flex; justify-content: space-between; margin-top: 36px; padding-top: 16px; page-break-inside: avoid; }")
+        html.append(".sig-box { text-align: center; width: 40%; }")
+        html.append(".sig-line { border-top: 1px dashed #64748B; margin-top: 40px; padding-top: 4px; font-size: 11px; font-weight: bold; color: #475569; }")
+        html.append("</style></head><body>")
+
+        targetStudents.forEachIndexed { index, student ->
+            val cls = classes.value.find { it.id == student.classId }
+            val clsName = cls?.name ?: "N/A"
+            val teacherName = cls?.inchargeTeacher?.ifBlank { "Macallinka Fasalka" } ?: "Macallinka Fasalka"
+            val studentMarks = allExamMarks.value.filter { it.studentId == student.id }
+            val serialCode = generateSerialCode("STR")
+
+            val totalScore = studentMarks.sumOf { it.score }
+            val totalMaxPossible = studentMarks.sumOf { m -> allExamsList.find { it.id == m.examId }?.totalMarks ?: 100.0 }
+            val academicAvg = if (totalMaxPossible > 0) (totalScore / totalMaxPossible) * 100.0 else 0.0
+
+            html.append("<div style='border: 1.5px solid #006A6B; padding: 14px; border-radius: 6px;'>")
+            html.append(getArtisticHeaderHtml(
+                context = context,
+                schoolTitle = schoolHeader,
+                reportTitle = "WARBIXINTA GUUD EE ARDAYGA (STUDENT COMPREHENSIVE REPORT)",
+                serialCode = serialCode,
+                dateStr = nowDateTime,
+                badgeText = "OFFICIAL PROFILE"
+            ))
+
+            html.append("<div class='section-title'>1. Xogta Shakhsiga & Diiwaanka (Student Profile)</div>")
+            html.append("<div class='info-grid'>")
+            html.append("<div class='info-item'><b>Magaca Ardayga:</b> ${student.name}</div>")
+            html.append("<div class='info-item'><b>Student ID:</b> <span style='font-family:monospace; font-weight:bold; color:#006A6B;'>${student.studentId}</span></div>")
+            html.append("<div class='info-item'><b>Fasalka:</b> $clsName &nbsp;(Macallin: $teacherName)</div>")
+            html.append("<div class='info-item'><b>Jinsiga:</b> ${student.gender}</div>")
+            html.append("<div class='info-item'><b>Magaca Hooyada:</b> ${student.motherName.ifBlank { "N/A" }}</div>")
+            html.append("<div class='info-item'><b>Telefoonka Waalidka:</b> ${student.phone.ifBlank { "N/A" }}</div>")
+            html.append("<div class='info-item'><b>Xaaladda Fiiga:</b> ${if (student.isFree) "<span class='badge badge-free'>FREE / SCHOLARSHIP (Bilaash)</span>" else "<span class='badge'>STANDARD ENROLLMENT</span>"}</div>")
+            html.append("<div class='info-item'><b>Status-ka Guud:</b> <span class='badge badge-pass'>ACTIVE ENROLLED</span></div>")
+            html.append("</div>")
+
+            html.append("<div class='section-title'>2. Natiijooyinka Imtixaanaadka & Dhibcaha (Academic Performance)</div>")
+            if (studentMarks.isEmpty()) {
+                html.append("<p style='font-size:11px; color:#64748B; font-style:italic;'>Wax natiijooyin imtixaan ah weli looma diiwaangelin ardaygan.</p>")
+            } else {
+                html.append("<div class='kpi-row'>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Wadarta Dhibcaha</div><div class='kpi-val'>${String.format("%.1f", totalScore)} / ${String.format("%.0f", totalMaxPossible)}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Celceliska Guud (%)</div><div class='kpi-val'>${String.format("%.1f%%", academicAvg)}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Maadooyinka La Galay</div><div class='kpi-val'>${studentMarks.size}</div></div>")
+                html.append("<div class='kpi-card'><div class='kpi-lbl'>Heerka Tacliinta</div><div class='kpi-val' style='color:${if (academicAvg >= 50) "#15803D" else "#B91C1C"}'>${if (academicAvg >= 50) "GUUL (PASS)" else "DHACAY (FAIL)"}</div></div>")
+                html.append("</div>")
+
+                html.append("<table>")
+                html.append("<thead><tr><th>Maadada</th><th>Imtixaanka</th><th>Dhibcaha</th><th>Max</th><th>Boqolkiiba</th><th>Darajada</th><th>Xaaladda</th></tr></thead><tbody>")
+                studentMarks.forEach { mark ->
+                    val ex = allExamsList.find { it.id == mark.examId }
+                    val exName = ex?.name ?: "Imtixaan"
+                    val subName = ex?.subject?.ifBlank { "Maado" } ?: "Maado"
+                    val maxM = ex?.totalMarks ?: 100.0
+                    val pct = if (maxM > 0) (mark.score / maxM) * 100.0 else 0.0
+                    val pass = mark.score >= (maxM / 2.0)
+                    val gradeStr = when {
+                        pct >= 90 -> "A"
+                        pct >= 80 -> "B"
+                        pct >= 70 -> "C"
+                        pct >= 50 -> "D"
+                        else -> "F"
+                    }
+                    val statusStr = if (mark.isAbsent) "<span style='color:#B91C1C;'>ABSENT</span>" else if (pass) "<span style='color:#15803D; font-weight:bold;'>PASSED</span>" else "<span style='color:#B91C1C; font-weight:bold;'>FAILED</span>"
+
+                    html.append("<tr><td>$subName</td><td>$exName</td><td>${mark.score}</td><td>$maxM</td><td>${String.format("%.1f%%", pct)}</td><td><b>$gradeStr</b></td><td>$statusStr</td></tr>")
+                }
+                html.append("</tbody></table>")
+            }
+
+            html.append("<div class='signatures'>")
+            html.append("<div class='sig-box'><div class='sig-line'>Macallinka Fasalka</div></div>")
+            html.append("<div class='sig-box'><div class='sig-line'>Maamulaha Dugsiga</div></div>")
+            html.append("</div>")
+
+            html.append("</div>")
+
+            if (index < targetStudents.size - 1) {
+                html.append("<div class='page-break'></div>")
+            }
+        }
+
+        html.append("</body></html>")
+        val clsName = targetClasses.firstOrNull()?.name?.replace(" ", "_") ?: "All_Classes"
+        repository.printHtmlReport(context, html.toString(), "All_Student_Reports_$clsName")
     }
 
     fun printAttendanceReportHtml(context: Context, selectedClassId: Long) {

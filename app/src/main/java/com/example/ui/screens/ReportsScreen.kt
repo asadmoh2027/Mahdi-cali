@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.*
@@ -27,12 +28,21 @@ fun ReportsScreen(
     onSaveSchoolName: (String) -> Unit,
     classes: List<SchoolClass>,
     students: List<Student>,
+    users: List<User> = emptyList(),
     exams: List<Exam>,
     fees: List<FeeRecord>,
     attendance: List<AttendanceRecord>,
+    classroomsCount: Int = 12,
+    chairsCount: Int = 350,
+    toiletsCount: Int = 10,
+    officesCount: Int = 4,
+    kitchenFeedingCount: Int = 1,
+    onUpdateFacilities: (classrooms: Int, chairs: Int, toilets: Int, offices: Int, kitchenFeeding: Int) -> Unit = { _, _, _, _, _ -> },
+    onPrintSchoolOverviewReport: () -> Unit = {},
     onExportExamCsv: () -> Unit,
     onExportFeeCsv: () -> Unit,
     onPrintSingleStudentReport: (Student) -> Unit,
+    onPrintAllStudentsReportCards: (Long) -> Unit = {},
     onPrintFeeReport: () -> Unit,
     onPrintClassReport: (Long) -> Unit,
     onPrintAttendanceReport: (Long) -> Unit,
@@ -43,9 +53,60 @@ fun ReportsScreen(
     var schoolNameInput by remember(schoolName) { mutableStateOf(schoolName) }
     var selectedStudentId by remember { mutableStateOf<Long?>(students.firstOrNull()?.id) }
     var selectedClassReportId by remember { mutableLongStateOf(0L) }
+    var showFacilityDialog by remember { mutableStateOf(false) }
 
     val totalStudents = students.size
     val totalClasses = classes.size
+
+    val boysCount = students.count { it.gender.equals("Male", ignoreCase = true) || it.gender.equals("Wiil", ignoreCase = true) }
+    val girlsCount = students.count { it.gender.equals("Female", ignoreCase = true) || it.gender.equals("Gabdho", ignoreCase = true) || it.gender.equals("Gabdhaha", ignoreCase = true) }
+    val boysPct = if (totalStudents > 0) (boysCount.toFloat() / totalStudents.toFloat()) else 0.5f
+    val girlsPct = if (totalStudents > 0) (girlsCount.toFloat() / totalStudents.toFloat()) else 0.5f
+
+    val totalTeachers = users.count { it.role.equals("TEACHER", ignoreCase = true) || it.role.equals("ADMIN", ignoreCase = true) }.coerceAtLeast(1)
+
+    if (showFacilityDialog) {
+        var clsInput by remember { mutableStateOf(classroomsCount.toString()) }
+        var chrInput by remember { mutableStateOf(chairsCount.toString()) }
+        var tltInput by remember { mutableStateOf(toiletsCount.toString()) }
+        var offInput by remember { mutableStateOf(officesCount.toString()) }
+        var ktcInput by remember { mutableStateOf(kitchenFeedingCount.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showFacilityDialog = false },
+            title = { Text("✏️ Bedel Agabka Dugsiga (Facilities)") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = clsInput, onValueChange = { clsInput = it }, label = { Text("Fasalada (Classrooms)") }, singleLine = true)
+                    OutlinedTextField(value = chrInput, onValueChange = { chrInput = it }, label = { Text("Kuraasta (Chairs)") }, singleLine = true)
+                    OutlinedTextField(value = tltInput, onValueChange = { tltInput = it }, label = { Text("Musqulaha (Toilets)") }, singleLine = true)
+                    OutlinedTextField(value = offInput, onValueChange = { offInput = it }, label = { Text("Xafiisyada (Offices)") }, singleLine = true)
+                    OutlinedTextField(value = ktcInput, onValueChange = { ktcInput = it }, label = { Text("Jikada Cuntada (Kitchen Feeding)") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateFacilities(
+                            clsInput.toIntOrNull() ?: classroomsCount,
+                            chrInput.toIntOrNull() ?: chairsCount,
+                            tltInput.toIntOrNull() ?: toiletsCount,
+                            offInput.toIntOrNull() ?: officesCount,
+                            ktcInput.toIntOrNull() ?: kitchenFeedingCount
+                        )
+                        showFacilityDialog = false
+                    }
+                ) {
+                    Text("KAYDI (SAVE)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFacilityDialog = false }) {
+                    Text("KA NOQ")
+                }
+            }
+        )
+    }
 
     val attPresent = attendance.count { it.status == "Present" }
     val attTotal = attendance.size
@@ -157,6 +218,151 @@ fun ReportsScreen(
                 }
             }
 
+            // --- School Overview Report: Assets, Teachers & Boys/Girls Chart ---
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "🏫 Warbixinta Dugsiga (Facilities, Staff & Gender Chart)",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TealPrimary
+                            )
+                            IconButton(onClick = { showFacilityDialog = true }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Facilities", tint = TealPrimary)
+                            }
+                        }
+
+                        // 1. Facilities Grid
+                        Text("1. Agabka Dugsiga (Facilities & Assets):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = TealContainer)) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("${classroomsCount.coerceAtLeast(classes.size)}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text("Fasalada", fontSize = 9.sp, color = DarkText)
+                                }
+                            }
+                            Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = GoldContainer)) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("$chairsCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                                    Text("Kuraasta", fontSize = 9.sp, color = DarkText)
+                                }
+                            }
+                            Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("$toiletsCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text("Musqulaha", fontSize = 9.sp, color = DarkText)
+                                }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("$officesCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                                    Text("Office", fontSize = 9.sp, color = DarkText)
+                                }
+                            }
+                            Card(modifier = Modifier.weight(2f), colors = CardDefaults.cardColors(containerColor = TealContainer)) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("$kitchenFeedingCount Jiko", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text("Kitchen Feeding Program", fontSize = 9.sp, color = DarkText)
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                        // 2. Teachers Summary
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("2. Macalimiinta Dugsiga (Teachers):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = TealPrimary.copy(alpha = 0.1f)
+                            ) {
+                                Text("👨‍🏫 $totalTeachers Macalin", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                        // 3. Boys & Girls Graph
+                        Text("3. Garaafka Wiilasha & Gabdhaha (Boys & Girls Graph):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                        
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(10.dp))
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("👦 Wiilasha (Boys): $boysCount (${String.format(java.util.Locale.US, "%.1f", boysPct * 100)}%)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0284C7))
+                                Text("👧 Gabdhaha (Girls): $girlsCount (${String.format(java.util.Locale.US, "%.1f", girlsPct * 100)}%)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD946EF))
+                            }
+
+                            // Visual Stacked Progress Bar
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(20.dp)
+                                    .background(Color.LightGray.copy(alpha = 0.3f), shape = RoundedCornerShape(10.dp))
+                            ) {
+                                if (boysPct > 0f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .weight(boysPct.coerceAtLeast(0.01f))
+                                            .background(Color(0xFF0284C7), shape = RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp))
+                                    )
+                                }
+                                if (girlsPct > 0f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .weight(girlsPct.coerceAtLeast(0.01f))
+                                            .background(Color(0xFFD946EF), shape = RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp))
+                                    )
+                                }
+                            }
+
+                            Text("Wadarta Guud ee Ardayda: $totalStudents arday", fontSize = 10.sp, color = MutedText, modifier = Modifier.align(Alignment.CenterHorizontally))
+                        }
+
+                        // Print School Report Button
+                        Button(
+                            onClick = onPrintSchoolOverviewReport,
+                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("🖨️ DAABAC WARBIXINTA GUUD EE DUGSIGA (PDF)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
             // --- 1. Individual Student Report Print ---
             item {
                 Card(
@@ -206,18 +412,38 @@ fun ReportsScreen(
                                 }
                             }
 
-                            Button(
-                                onClick = {
-                                    val st = students.find { it.id == selectedStudentId }
-                                    if (st != null) onPrintSingleStudentReport(st)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
-                                shape = RoundedCornerShape(10.dp),
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("🖨️ PRINT STUDENT REPORT CARD", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Button(
+                                    onClick = {
+                                        val st = students.find { it.id == selectedStudentId }
+                                        if (st != null) onPrintSingleStudentReport(st)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("🖨️ Keli (Single)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                Button(
+                                    onClick = {
+                                        val st = students.find { it.id == selectedStudentId }
+                                        val classId = st?.classId ?: 0L
+                                        onPrintAllStudentsReportCards(classId)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = TealDark),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("📚 Fasalka (All PDF)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
 
                             OutlinedButton(

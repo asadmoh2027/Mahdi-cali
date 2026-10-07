@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
         Announcement::class,
         SyncQueue::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class SchoolDatabase : RoomDatabase() {
@@ -54,6 +54,20 @@ abstract class SchoolDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: SchoolDatabase? = null
 
+        private val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE school_classes ADD COLUMN shift TEXT NOT NULL DEFAULT 'Gelin Hore'")
+                } catch (e: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE students ADD COLUMN shift TEXT NOT NULL DEFAULT 'Gelin Hore'")
+                } catch (e: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE users ADD COLUMN shift TEXT NOT NULL DEFAULT 'Dhammaan'")
+                } catch (e: Exception) {}
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): SchoolDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -61,8 +75,8 @@ abstract class SchoolDatabase : RoomDatabase() {
                     SchoolDatabase::class.java,
                     "school_system_db"
                 )
-                // Removed fallbackToDestructiveMigration() to prevent accidental data loss.
-                // Room will throw an exception if migrations are missing, forcing us to handle them explicitly.
+                .addMigrations(MIGRATION_6_7)
+                .fallbackToDestructiveMigrationOnDowngrade()
                 .addCallback(SchoolDatabaseCallback(scope))
                 .build()
                 INSTANCE = instance

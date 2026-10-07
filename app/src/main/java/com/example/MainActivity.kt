@@ -51,8 +51,15 @@ class MainActivity : ComponentActivity() {
                 val users by viewModel.users.collectAsStateWithLifecycle()
                 val schoolName by viewModel.schoolName.collectAsStateWithLifecycle()
                 val subjects by viewModel.subjects.collectAsStateWithLifecycle()
+                val selectedShift by viewModel.selectedShift.collectAsStateWithLifecycle()
 
                 val searchedReportCard by viewModel.searchedReportCard.collectAsStateWithLifecycle()
+
+                val classroomsCount by viewModel.classroomsCount.collectAsStateWithLifecycle()
+                val chairsCount by viewModel.chairsCount.collectAsStateWithLifecycle()
+                val toiletsCount by viewModel.toiletsCount.collectAsStateWithLifecycle()
+                val officesCount by viewModel.officesCount.collectAsStateWithLifecycle()
+                val kitchenFeedingCount by viewModel.kitchenFeedingCount.collectAsStateWithLifecycle()
 
                 val lastCloudSyncTime by viewModel.lastCloudSyncTime.collectAsStateWithLifecycle()
                 val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
@@ -121,6 +128,11 @@ class MainActivity : ComponentActivity() {
                         DashboardScreen(
                             user = currentUser,
                             schoolName = schoolName,
+                            selectedShift = selectedShift,
+                            onShiftSelected = { shift -> viewModel.setSelectedShift(shift) },
+                            classList = classes,
+                            studentList = students,
+                            userList = users,
                             onNavigate = { route ->
                                 navController.navigate(route)
                             },
@@ -152,8 +164,10 @@ class MainActivity : ComponentActivity() {
                         ClassesScreen(
                             classes = classes,
                             currentUser = currentUser,
-                            onAddClassClick = { name, teacher, start, end ->
-                                viewModel.addClass(name, teacher, start, end)
+                            selectedShift = selectedShift,
+                            onShiftSelected = { shift -> viewModel.setSelectedShift(shift) },
+                            onAddClassClick = { name, teacher, start, end, shift ->
+                                viewModel.addClass(name, teacher, start, end, shift)
                             },
                             onDeleteClassClick = { id ->
                                 viewModel.deleteClass(id)
@@ -334,12 +348,23 @@ class MainActivity : ComponentActivity() {
                             onSaveSchoolName = { name -> viewModel.saveSchoolName(name) },
                             classes = classes,
                             students = students,
+                            users = users,
                             exams = exams,
                             fees = fees,
                             attendance = attendance,
+                            classroomsCount = classroomsCount,
+                            chairsCount = chairsCount,
+                            toiletsCount = toiletsCount,
+                            officesCount = officesCount,
+                            kitchenFeedingCount = kitchenFeedingCount,
+                            onUpdateFacilities = { classrooms, chairs, toilets, offices, kitchenFeeding ->
+                                viewModel.updateSchoolFacilities(classrooms, chairs, toilets, offices, kitchenFeeding)
+                            },
+                            onPrintSchoolOverviewReport = { viewModel.printSchoolOverviewReportHtml(context) },
                             onExportExamCsv = { viewModel.exportExamReportCSV(context) },
                             onExportFeeCsv = { viewModel.exportFeeReportCSV(context) },
                             onPrintSingleStudentReport = { student -> viewModel.printSingleStudentReport(context, student) },
+                            onPrintAllStudentsReportCards = { classId -> viewModel.printAllStudentsComprehensiveReportsHtml(context, classId) },
                             onPrintFeeReport = { viewModel.printFeeReportHtml(context) },
                             onPrintClassReport = { classId -> viewModel.printClassReportHtml(context, classId) },
                             onPrintAttendanceReport = { classId -> viewModel.printAttendanceReportHtml(context, classId) },
@@ -377,6 +402,9 @@ class MainActivity : ComponentActivity() {
                             onPrintClearanceHtml = { ctx, student, prevSch, destSch, destCls, acYr ->
                                 viewModel.printStudentClearanceHtml(ctx, student, prevSch, destSch, destCls, acYr)
                             },
+                            onPrintAllClassClearancesHtml = { ctx, classId, prevSch, destSch, destCls, acYr ->
+                                viewModel.printAllClassClearancesHtml(ctx, classId, prevSch, destSch, destCls, acYr)
+                            },
                             onBackClick = { navController.popBackStack() }
                         )
                     }
@@ -391,6 +419,9 @@ class MainActivity : ComponentActivity() {
                             allMarks = allMarks,
                             onPrintMarksheetHtml = { ctx, student, acYr, destCls ->
                                 viewModel.printStudentMarksheetHtml(ctx, student, acYr, destCls)
+                            },
+                            onPrintAllClassMarksheetsHtml = { ctx, classId, acYr, destCls ->
+                                viewModel.printAllClassMarksheetsHtml(ctx, classId, acYr, destCls)
                             },
                             onBackClick = { navController.popBackStack() }
                         )

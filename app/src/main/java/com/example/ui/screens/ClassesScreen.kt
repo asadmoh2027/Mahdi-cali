@@ -34,7 +34,9 @@ import com.example.ui.theme.*
 fun ClassesScreen(
     classes: List<SchoolClass>,
     currentUser: User? = null,
-    onAddClassClick: (String, String, String, String) -> Unit,
+    selectedShift: String = "Dhammaan",
+    onShiftSelected: (String) -> Unit = {},
+    onAddClassClick: (String, String, String, String, String) -> Unit,
     onDeleteClassClick: (Long) -> Unit,
     onBackClick: () -> Unit
 ) {
@@ -43,6 +45,17 @@ fun ClassesScreen(
     val isAdmin = currentUser == null || currentUser.role == "ADMIN"
     val isCashier = currentUser?.role == "CASHIER"
     val isTeacher = currentUser?.role == "TEACHER"
+
+    val filteredClasses = remember(classes, selectedShift) {
+        if (selectedShift.equals("Dhammaan", ignoreCase = true) || selectedShift.isBlank()) {
+            classes
+        } else {
+            classes.filter { it.shift.equals(selectedShift, ignoreCase = true) }
+        }
+    }
+
+    val morningCount = classes.count { it.shift.equals("Gelin Hore", ignoreCase = true) }
+    val afternoonCount = classes.count { it.shift.equals("Gelin Danbe", ignoreCase = true) }
 
     Scaffold(
         topBar = {
@@ -89,6 +102,15 @@ fun ClassesScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            // Shift Selector Bar
+            com.example.ui.components.ShiftSelectorBar(
+                selectedShift = selectedShift,
+                onShiftSelected = onShiftSelected,
+                morningCount = morningCount,
+                afternoonCount = afternoonCount,
+                totalCount = classes.size
+            )
+
             if (isTeacher) {
                 Card(
                     shape = RoundedCornerShape(10.dp),
@@ -131,16 +153,16 @@ fun ClassesScreen(
                 }
             }
 
-            if (classes.isEmpty()) {
+            if (filteredClasses.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No classes added yet. Tap '+' to create a class.", color = MutedText, fontSize = 13.sp)
+                    Text("No classes found for '$selectedShift'. Tap '+' to create a class.", color = MutedText, fontSize = 13.sp)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(classes) { cls ->
+                    items(filteredClasses) { cls ->
                         val isAssignedToMe = isTeacher && (currentUser?.getAssignedClassIdSet()?.contains(cls.id) == true)
 
                         Card(
@@ -167,6 +189,20 @@ fun ClassesScreen(
                                             fontWeight = FontWeight.Bold,
                                             color = TealPrimary
                                         )
+                                        // Shift Badge
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (cls.shift.contains("Danbe", ignoreCase = true)) Color(0xFFFEF3C7) else Color(0xFFE0F2FE)
+                                        ) {
+                                            Text(
+                                                text = if (cls.shift.contains("Danbe", ignoreCase = true)) "🌙 Gelin Danbe" else "☀️ Gelin Hore",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (cls.shift.contains("Danbe", ignoreCase = true)) Color(0xFF92400E) else Color(0xFF0369A1),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+
                                         if (isAssignedToMe) {
                                             Surface(
                                                 color = PassGreen,
@@ -212,9 +248,10 @@ fun ClassesScreen(
 
         if (showAddDialog && isAdmin) {
             AddClassDialog(
+                defaultShift = if (selectedShift == "Dhammaan") "Gelin Hore" else selectedShift,
                 onDismiss = { showAddDialog = false },
-                onSave = { name, teacher, start, end ->
-                    onAddClassClick(name, teacher, start, end)
+                onSave = { name, teacher, start, end, shift ->
+                    onAddClassClick(name, teacher, start, end, shift)
                     showAddDialog = false
                 }
             )
@@ -253,13 +290,15 @@ fun ClassesScreen(
 
 @Composable
 fun AddClassDialog(
+    defaultShift: String = "Gelin Hore",
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String) -> Unit
+    onSave: (String, String, String, String, String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var incharge by remember { mutableStateOf("") }
     var startDate by remember { mutableStateOf("01-09-2025") }
     var endDate by remember { mutableStateOf("30-06-2026") }
+    var shift by remember { mutableStateOf(if (defaultShift.isBlank() || defaultShift == "Dhammaan") "Gelin Hore" else defaultShift) }
 
     val focusManager = LocalFocusManager.current
 
@@ -280,6 +319,32 @@ fun AddClassDialog(
                     keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Text(
+                    text = "Shift-ka Fasalka (Session):",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TealDark,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = shift == "Gelin Hore",
+                        onClick = { shift = "Gelin Hore" },
+                        label = { Text("☀️ Gelin Hore") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = shift == "Gelin Danbe",
+                        onClick = { shift = "Gelin Danbe" },
+                        label = { Text("🌙 Gelin Danbe") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
                 OutlinedTextField(
                     value = incharge,
@@ -309,7 +374,7 @@ fun AddClassDialog(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
                         focusManager.clearFocus()
-                        if (name.isNotBlank()) onSave(name, incharge, startDate, endDate)
+                        if (name.isNotBlank()) onSave(name, incharge, startDate, endDate, shift)
                     }),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -317,7 +382,7 @@ fun AddClassDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank()) onSave(name, incharge, startDate, endDate) },
+                onClick = { if (name.isNotBlank()) onSave(name, incharge, startDate, endDate, shift) },
                 colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
             ) {
                 Text("SAVE CLASS")
