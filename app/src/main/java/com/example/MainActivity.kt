@@ -133,6 +133,14 @@ class MainActivity : ComponentActivity() {
                             classList = classes,
                             studentList = students,
                             userList = users,
+                            classroomsCount = classroomsCount,
+                            chairsCount = chairsCount,
+                            toiletsCount = toiletsCount,
+                            officesCount = officesCount,
+                            kitchenFeedingCount = kitchenFeedingCount,
+                            onUpdateFacilities = { cls, chr, tlt, off, ktc ->
+                                viewModel.updateSchoolFacilities(cls, chr, tlt, off, ktc)
+                            },
                             onNavigate = { route ->
                                 navController.navigate(route)
                             },

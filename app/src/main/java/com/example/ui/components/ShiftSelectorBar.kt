@@ -29,40 +29,40 @@ fun ShiftSelectorBar(
     modifier: Modifier = Modifier
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = " Shift-ka Dugsiga (School Session):",
-                    fontSize = 12.sp,
+                    text = "Shift-ka Dugsiga:",
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = TealDark
                 )
                 Text(
                     text = when (selectedShift) {
-                        "Gelin Hore" -> "☀️ Gelin Hore (Morning)"
-                        "Gelin Danbe" -> "🌙 Gelin Danbe (Afternoon)"
-                        else -> "🌐 Dhammaan (Maamulka)"
+                        "Gelin Hore" -> "☀️ Gelin Hore"
+                        "Gelin Danbe" -> "🌙 Gelin Danbe"
+                        else -> "🌐 Dhammaan"
                     },
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TealPrimary
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 val shifts = listOf(
                     Triple("Gelin Hore", "☀️ Gelin Hore", morningCount),
@@ -82,44 +82,44 @@ fun ShiftSelectorBar(
                     )
 
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = bgColor,
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .height(30.dp)
+                            .clip(RoundedCornerShape(6.dp))
                             .border(
-                                width = if (isSelected) 1.5.dp else 0.5.dp,
+                                width = if (isSelected) 1.dp else 0.5.dp,
                                 color = if (isSelected) TealDark else Color.Gray.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(6.dp)
                             )
                             .clickable { onShiftSelected(shiftKey) }
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 4.dp),
+                                .padding(horizontal = 2.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
                                 text = label,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = textColor
                             )
                             if (count != null && count >= 0) {
-                                Spacer(modifier = Modifier.width(3.dp))
+                                Spacer(modifier = Modifier.width(2.dp))
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) Color.White.copy(alpha = 0.25f) else TealPrimary.copy(alpha = 0.15f)
                                 ) {
                                     Text(
                                         text = "$count",
-                                        fontSize = 10.sp,
+                                        fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isSelected) Color.White else TealDark,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
                                     )
                                 }
                             }

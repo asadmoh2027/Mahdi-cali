@@ -28,6 +28,12 @@ import com.example.R
 import com.example.data.User
 import com.example.ui.theme.*
 
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 data class MenuOption(
     val title: String,
     val subtitle: String,
@@ -46,6 +52,12 @@ fun DashboardScreen(
     classList: List<com.example.data.SchoolClass> = emptyList(),
     studentList: List<com.example.data.Student> = emptyList(),
     userList: List<User> = emptyList(),
+    classroomsCount: Int = 12,
+    chairsCount: Int = 350,
+    toiletsCount: Int = 10,
+    officesCount: Int = 4,
+    kitchenFeedingCount: Int = 1,
+    onUpdateFacilities: (Int, Int, Int, Int, Int) -> Unit = { _, _, _, _, _ -> },
     onNavigate: (String) -> Unit,
     onLogoutClick: () -> Unit
 ) {
@@ -55,6 +67,92 @@ fun DashboardScreen(
     val isCashier = role == "CASHIER" || role == "ACCOUNTANT"
     val isParent = role == "PARENT"
     val isStudent = role == "STUDENT"
+
+    var showFacilityDialog by remember { mutableStateOf(false) }
+
+    if (showFacilityDialog) {
+        var clsInput by remember { mutableStateOf(classroomsCount.toString()) }
+        var chrInput by remember { mutableStateOf(chairsCount.toString()) }
+        var tltInput by remember { mutableStateOf(toiletsCount.toString()) }
+        var offInput by remember { mutableStateOf(officesCount.toString()) }
+        var ktcInput by remember { mutableStateOf(kitchenFeedingCount.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showFacilityDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🏢", fontSize = 22.sp)
+                    Text("Geli Agabka Dugsiga (School Assets)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Geli oo xaree tirada agabka iyo dhismaha uu maamuluhu maamulo:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = clsInput,
+                        onValueChange = { clsInput = it },
+                        label = { Text("Fasalada (Classrooms)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = chrInput,
+                        onValueChange = { chrInput = it },
+                        label = { Text("Kuraasta (Chairs / Desks)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = tltInput,
+                        onValueChange = { tltInput = it },
+                        label = { Text("Musqulaha (Toilets / Restrooms)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = offInput,
+                        onValueChange = { offInput = it },
+                        label = { Text("Office-yada Maamulka (Offices)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = ktcInput,
+                        onValueChange = { ktcInput = it },
+                        label = { Text("Kitchen Feeding (Jikada Cuntada Dugsiga)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateFacilities(
+                            clsInput.toIntOrNull() ?: classroomsCount,
+                            chrInput.toIntOrNull() ?: chairsCount,
+                            tltInput.toIntOrNull() ?: toiletsCount,
+                            offInput.toIntOrNull() ?: officesCount,
+                            ktcInput.toIntOrNull() ?: kitchenFeedingCount
+                        )
+                        showFacilityDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
+                ) {
+                    Text("KAYDI AGABKA")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFacilityDialog = false }) {
+                    Text("KA NOQ")
+                }
+            }
+        )
+    }
 
     // Shift counts
     val morningClasses = classList.count { it.shift.equals("Gelin Hore", ignoreCase = true) }
@@ -105,6 +203,7 @@ fun DashboardScreen(
             }
             else -> {
                 // Administrator / Super Admin
+                add(MenuOption("AGABKA DUGSIGA", "Geli & bedel fasalada, kuraasta, musqulaha, office & kitchen", "🏢", "facilities"))
                 add(MenuOption("CLASSES", "Manage school classes & teachers", "🏫", "classes"))
                 add(MenuOption("STUDENTS", "Register & view students (AUTO IDs)", "👨‍🎓", "students"))
                 add(MenuOption("MAADOYINKA", "Curriculum & school subjects", "📚", "subjects"))
@@ -176,46 +275,51 @@ fun DashboardScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             // User Greeting Header Card
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(containerColor = TealContainer),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp)
+                    .padding(bottom = 6.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = TealPrimary,
-                        modifier = Modifier.size(44.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Khatum / Soo Dhawoow, ${user?.fullName ?: "Admin"}!",
-                            fontSize = 15.sp,
+                            text = "Soo Dhowow Maamule",
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = TealDark
                         )
                         val roleInfo = when (user?.role) {
-                            "TEACHER" -> "Teacher Mode • Access Restricted to Permitted Classes"
-                            "CASHIER" -> "Cashier Mode • Fee Register & Financial Management"
-                            else -> "Administrator • Direct Multi-Shift Overview"
+                            "TEACHER" -> "Maamulka Macallinka • Fasalada Laguu Ogolyahay"
+                            "CASHIER" -> "Maamulka Khaznadaha • Lacagaha"
+                            else -> "Maamulaha Guud • Dhammaan Shifftooyinka"
                         }
                         Text(
                             text = roleInfo,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             color = DarkText
                         )
                     }
@@ -229,7 +333,7 @@ fun DashboardScreen(
                 morningCount = morningClasses,
                 afternoonCount = afternoonClasses,
                 totalCount = totalClassesCount,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 6.dp)
             )
 
             // Administrator Overview Summary Card (Both Shifts Combined & Individual Breakdown)
@@ -306,6 +410,142 @@ fun DashboardScreen(
                         }
                     }
                 }
+
+                // Agabka & Dhismayaasha Dugsiga (Facilities & Assets Card)
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = TealPrimary,
+                                    modifier = Modifier.size(30.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text("🏢", fontSize = 15.sp)
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "AGABKA DUGSIGA",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TealDark
+                                    )
+                                    Text(
+                                        text = "Fasalada, Kuraasta, Musqulaha, Office & Jikada",
+                                        fontSize = 9.5.sp,
+                                        color = DarkText
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { showFacilityDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.White)
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("GELI / BEDEL", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Sub-categories listed underneath (Qaybuhu Ku Hoos Jiraan)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = TealContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(5.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "🏫 FASALA", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "${classroomsCount.coerceAtLeast(totalClassesCount)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = GoldContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(5.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "🪑 KURAAST", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                                    Text(text = "$chairsCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(5.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "🚻 MUSQUL", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "$toiletsCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(5.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "🏢 OFFICE", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                                    Text(text = "$officesCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = TealContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(5.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = "🍲 JIKADA", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                    Text(text = "$kitchenFeedingCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Grid Options
@@ -320,7 +560,13 @@ fun DashboardScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(110.dp)
-                            .clickable { onNavigate(option.route) },
+                            .clickable {
+                                if (option.route == "facilities") {
+                                    showFacilityDialog = true
+                                } else {
+                                    onNavigate(option.route)
+                                }
+                            },
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = TealPrimary),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
