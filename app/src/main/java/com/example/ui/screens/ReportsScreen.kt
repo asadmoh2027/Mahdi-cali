@@ -45,7 +45,7 @@ fun ReportsScreen(
     onPrintAllStudentsReportCards: (Long) -> Unit = {},
     onPrintFeeReport: () -> Unit,
     onPrintClassReport: (Long) -> Unit,
-    onPrintAttendanceReport: (Long) -> Unit,
+    onPrintAttendanceReport: (Long, String?) -> Unit,
     onPrintExamReport: (Long) -> Unit,
     onOpenClearanceClick: () -> Unit = {},
     onBackClick: () -> Unit
@@ -53,6 +53,7 @@ fun ReportsScreen(
     var schoolNameInput by remember(schoolName) { mutableStateOf(schoolName) }
     var selectedStudentId by remember { mutableStateOf<Long?>(students.firstOrNull()?.id) }
     var selectedClassReportId by remember { mutableLongStateOf(0L) }
+    var selectedAttMonthFilter by remember { mutableStateOf<String?>(null) }
     var showFacilityDialog by remember { mutableStateOf(false) }
 
     val totalStudents = students.size
@@ -460,6 +461,12 @@ fun ReportsScreen(
 
             // --- 2. Class, Attendance & Exam Reports ---
             item {
+                val availableAttMonths = remember(attendance) {
+                    val monthsFromData = attendance.map { it.date.take(7) }.filter { it.length == 7 }.distinct()
+                    val currentM = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
+                    (monthsFromData + currentM).distinct().sortedDescending()
+                }
+
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -469,6 +476,7 @@ fun ReportsScreen(
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("🏫 2. Class, Attendance & Exam Reports", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
 
+                        Text("1. Dooro Fasalka (Select Class):", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = DarkText)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -487,6 +495,27 @@ fun ReportsScreen(
                             }
                         }
 
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                        Text("2. Dooro Bisha/Xilliga Xaadirinta (Attendance Month Filter):", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilterChip(
+                                selected = selectedAttMonthFilter == null,
+                                onClick = { selectedAttMonthFilter = null },
+                                label = { Text("Dhamaan (All Time)", fontSize = 11.sp) }
+                            )
+                            availableAttMonths.forEach { mStr ->
+                                FilterChip(
+                                    selected = selectedAttMonthFilter == mStr,
+                                    onClick = { selectedAttMonthFilter = mStr },
+                                    label = { Text("Bisha $mStr", fontSize = 11.sp) }
+                                )
+                            }
+                        }
+
                         OutlinedButton(
                             onClick = { onPrintClassReport(selectedClassReportId) },
                             modifier = Modifier.fillMaxWidth(),
@@ -497,15 +526,23 @@ fun ReportsScreen(
                             Text("🖨️ Print Class Roster Report", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
 
-                        OutlinedButton(
-                            onClick = { onPrintAttendanceReport(selectedClassReportId) },
+                        Button(
+                            onClick = { onPrintAttendanceReport(selectedClassReportId, selectedAttMonthFilter) },
+                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("🖨️ Print Class Attendance Report", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            val mText = if (selectedAttMonthFilter != null) "Bisha $selectedAttMonthFilter" else "Dhamaan Xilliyada"
+                            Text("🖨️ DAABAC WARBIXINTA XAADIRINTA & WAKHTIGA MACALINKU XAADIRIYAY ($mText)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
+
+                        Text(
+                            "ℹ️ Warbixintani waxay muujinaysaa wakhtiga saxda ah ee macalinku xaadiriyay ardayda iyo haday ku dhex jirtay saacadaha shaqada (08:00-12:00 / 14:00-16:30) ama ka baxsan.",
+                            fontSize = 10.sp,
+                            color = MutedText
+                        )
 
                         OutlinedButton(
                             onClick = { onPrintExamReport(selectedClassReportId) },

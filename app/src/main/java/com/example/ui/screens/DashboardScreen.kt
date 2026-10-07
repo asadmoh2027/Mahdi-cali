@@ -52,6 +52,7 @@ fun DashboardScreen(
     classList: List<com.example.data.SchoolClass> = emptyList(),
     studentList: List<com.example.data.Student> = emptyList(),
     userList: List<User> = emptyList(),
+    attendanceList: List<com.example.data.AttendanceRecord> = emptyList(),
     classroomsCount: Int = 12,
     chairsCount: Int = 350,
     toiletsCount: Int = 10,
@@ -67,6 +68,16 @@ fun DashboardScreen(
     val isCashier = role == "CASHIER" || role == "ACCOUNTANT"
     val isParent = role == "PARENT"
     val isStudent = role == "STUDENT"
+
+    val todayStr = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()) }
+    val unmarkedAttendanceCount = remember(classList, attendanceList, selectedShift, todayStr) {
+        val activeClasses = classList.filter {
+            it.status == "ACTIVE" && (selectedShift == "Dhammaan" || it.shift.equals(selectedShift, ignoreCase = true))
+        }
+        activeClasses.count { cls ->
+            attendanceList.none { att -> att.classId == cls.id && (att.date == todayStr || att.date.startsWith(todayStr)) }
+        }
+    }
 
     var showFacilityDialog by remember { mutableStateOf(false) }
 
@@ -203,7 +214,6 @@ fun DashboardScreen(
             }
             else -> {
                 // Administrator / Super Admin
-                add(MenuOption("AGABKA DUGSIGA", "Geli & bedel fasalada, kuraasta, musqulaha, office & kitchen", "🏢", "facilities"))
                 add(MenuOption("CLASSES", "Manage school classes & teachers", "🏫", "classes"))
                 add(MenuOption("STUDENTS", "Register & view students (AUTO IDs)", "👨‍🎓", "students"))
                 add(MenuOption("MAADOYINKA", "Curriculum & school subjects", "📚", "subjects"))
@@ -577,10 +587,38 @@ fun DashboardScreen(
                                 .padding(12.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = option.icon,
-                                fontSize = 28.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = option.icon,
+                                    fontSize = 28.sp
+                                )
+
+                                if (option.route == "transparency" && unmarkedAttendanceCount > 0) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color(0xFFE11D48),
+                                        shadowElevation = 2.dp
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Text("🔔", fontSize = 10.sp)
+                                            Text(
+                                                text = "$unmarkedAttendanceCount",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
 
                             Column {
                                 Text(
@@ -590,9 +628,11 @@ fun DashboardScreen(
                                     color = Color.White
                                 )
                                 Text(
-                                    text = option.subtitle,
+                                    text = if (option.route == "transparency" && unmarkedAttendanceCount > 0)
+                                        "🚨 $unmarkedAttendanceCount fasal aan la xaadirin!"
+                                        else option.subtitle,
                                     fontSize = 9.sp,
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    color = if (option.route == "transparency" && unmarkedAttendanceCount > 0) Color(0xFFFFD1D1) else Color.White.copy(alpha = 0.85f),
                                     maxLines = 1
                                 )
                             }

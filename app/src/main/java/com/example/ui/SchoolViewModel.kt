@@ -1946,30 +1946,42 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
     fun saveAttendance(classId: Long, date: String, records: List<AttendanceRecord>) {
         viewModelScope.launch {
-            repository.saveAttendanceList(classId, date, records)
+            val nowSdf = java.text.SimpleDateFormat("hh:mm:ss a", java.util.Locale.getDefault())
+            val timeNowStr = nowSdf.format(java.util.Date())
+            val user = _currentUser.value
+            val userName = user?.fullName ?: user?.username ?: "Macallin"
+
+            val enrichedRecords = records.map { r ->
+                r.copy(
+                    recordedBy = if (r.recordedBy.isBlank()) userName else r.recordedBy,
+                    recordedAt = if (r.recordedAt.isBlank()) timeNowStr else r.recordedAt
+                )
+            }
+
+            repository.saveAttendanceList(classId, date, enrichedRecords)
             val clsName = classes.value.find { it.id == classId }?.name ?: "Class #$classId"
-            val pCount = records.count { it.status == "Present" }
-            val aCount = records.count { it.status == "Absent" }
-            val fCount = records.count { it.status == "Free" }
-            val total = records.size
+            val pCount = enrichedRecords.count { it.status == "Present" }
+            val aCount = enrichedRecords.count { it.status == "Absent" }
+            val fCount = enrichedRecords.count { it.status == "Free" }
+            val total = enrichedRecords.size
 
             val studMap = students.value.associateBy { it.id }
             val rawBuilder = StringBuilder()
-            records.take(15).forEach { r ->
+            enrichedRecords.take(15).forEach { r ->
                 val sName = studMap[r.studentId]?.name ?: "Student #${r.studentId}"
                 rawBuilder.append("$sName: ${r.status} | ")
             }
-            if (records.size > 15) rawBuilder.append("+ ${records.size - 15} more...")
+            if (enrichedRecords.size > 15) rawBuilder.append("+ ${enrichedRecords.size - 15} more...")
 
             logAudit(
                 category = "ATTENDANCE",
                 title = "Diiwaangelinta Xaadirinta ($date)",
                 className = clsName,
-                details = "$total Arday: $pCount Jooga (Present), $aCount Maqan (Absent)" + (if (fCount > 0) ", $fCount Fasax" else ""),
+                details = "$total Arday: $pCount Jooga (Present), $aCount Maqan (Absent) • Saacadda: $timeNowStr" + (if (fCount > 0) ", $fCount Fasax" else ""),
                 rawData = rawBuilder.toString().trimEnd(' ', '|')
             )
             triggerAutoInternetSync(getApplication(), forceImmediate = true)
-            _uiMessage.emit("Xaadirinta maalinta $date waa la keydiyay (Hal mar ayaa la diiwaangeliyay)!")
+            _uiMessage.emit("Xaadirinta maalinta $date waa la keydiyay ($timeNowStr)!")
         }
     }
 
@@ -3908,54 +3920,134 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         repository.printHtmlReport(context, html.toString(), "All_Student_Reports_$clsName")
     }
 
-    fun printAttendanceReportHtml(context: Context, selectedClassId: Long) {
+    private fun isTimeOutsideWorkingHours(timeStr: String): Boolean {
+        if (timeStr.isBlank()) return false
+        try {
+            val clean = timeStr.trim().lowercase()
+            var hour24 = 0
+            var minute = 0
+
+            if (clean.contains("pm") || clean.contains("am")) {
+                val isPm = clean.contains("pm")
+                val isAm = clean.contains("am")
+                val digits = clean.replace("am", "").replace("pm", "").trim()
+                val timePart = if (digits.contains(" ")) digits.split(" ").last() else digits
+                val parts = timePart.split(":")
+                if (parts.isNotEmpty()) {
+                    val hour = parts[0].trim().toIntOrNull() ?: return false
+                    minute = if (parts.size > 1) parts[1].trim().toIntOrNull() ?: 0 else 0
+                    hour24 = hour
+                    if (isPm && hour < 12) hour24 += 12
+                    if (isAm && hour == 12) hour24 = 0
+                }
+            } else if (clean.contains(":")) {
+                val timePart = if (clean.contains(" ")) clean.split(" ").last() else clean
+                val parts = timePart.split(":")
+                if (parts.isNotEmpty()) {
+                    hour24 = parts[0].trim().toIntOrNull() ?: return false
+                    minute = if (parts.size > 1) parts[1].trim().toIntOrNull() ?: 0 else 0
+                }
+            } else {
+                return false
+            }
+
+            val totalMinutes = hour24 * 60 + minute
+            val morningStart = 8 * 60        // 08:00 AM
+            val morningEnd = 12 * 60         // 12:00 PM
+            val afternoonStart = 14 * 60     // 02:00 PM
+            val afternoonEnd = 16 * 60 + 30  // 04:30 PM
+
+            val inMorning = totalMinutes in morningStart..morningEnd
+            val inAfternoon = totalMinutes in afternoonStart..afternoonEnd
+
+            return !(inMorning || inAfternoon)
+        } catch (e: Exception) {
+            return false
+        }
+    }
+
+    fun printAttendanceReportHtml(context: Context, selectedClassId: Long, yearMonth: String? = null) {
         val targetClasses = if (selectedClassId == 0L) classes.value else classes.value.filter { it.id == selectedClassId }
         val allStuds = students.value
-        val allAtt = allAttendance.value
+        val rawAtt = allAttendance.value
+        val allAtt = if (!yearMonth.isNullOrBlank()) {
+            rawAtt.filter { it.date.startsWith(yearMonth) }
+        } else {
+            rawAtt
+        }
 
-        val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
+        val schoolHeader = schoolName.value.ifBlank { "Dugsiga H/Dhexe" }
         val serialCodeATT = generateSerialCode("ATT")
         val nowDateTimeATT = getCurrentDateTimeStr()
+        val periodText = if (!yearMonth.isNullOrBlank()) "BISHA: $yearMonth" else "DHAMAAN XILLIYADA (ALL TIME)"
 
         val html = StringBuilder()
-        html.append("<html><head><style>")
-        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.4; }")
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #111; font-size: 11px; line-height: 1.4; }")
         html.append(artisticHeaderCss)
-        html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }")
-        html.append("th { background: #006A6B; color: white; padding: 8px; text-align: left; font-size: 12px; }")
-        html.append("td { border-bottom: 1px solid #E2E8F0; padding: 6px; font-size: 12px; }")
+        html.append("table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 18px; text-align: left; }")
+        html.append("th { background: #006A6B; color: white; padding: 7px 8px; font-size: 11px; font-weight: bold; }")
+        html.append("td { border-bottom: 1px solid #E2E8F0; padding: 6px 8px; font-size: 11px; }")
+        html.append(".badge-outside { color: #991B1B; font-weight: bold; background: #FEE2E2; padding: 3px 8px; border-radius: 4px; border: 1px solid #FCA5A5; font-size: 10px; display: inline-block; }")
+        html.append(".badge-ok { color: #166534; font-weight: bold; background: #DCFCE7; padding: 3px 8px; border-radius: 4px; border: 1px solid #86EFAC; font-size: 10px; display: inline-block; }")
+        html.append("h3 { color: #006A6B; margin-top: 14px; margin-bottom: 6px; font-size: 13px; border-bottom: 1.5px solid #006A6B; padding-bottom: 2px; }")
         html.append("</style></head><body>")
 
         html.append(getArtisticHeaderHtml(
             context = context,
             schoolTitle = schoolHeader,
-            reportTitle = "WARBIXINTA GUUD EE XAADIRINTA (ATTENDANCE SUMMARY REPORT)",
+            reportTitle = "WARBIXINTA XAADIRINTA ARDAYDA IYO WAKHTIGA MACALINKU XAADIRIYAY",
             serialCode = serialCodeATT,
             dateStr = nowDateTimeATT,
-            badgeText = "ATTENDANCE REPORT"
+            badgeText = periodText
         ))
 
         targetClasses.forEach { cls ->
             val clsStuds = allStuds.filter { it.classId == cls.id }
-            html.append("<h3>Class: ${cls.name}</h3>")
+            val clsAtt = allAtt.filter { it.classId == cls.id }
+
+            html.append("<h2 style='color:#006A6B; border-left: 4px solid #006A6B; padding-left: 8px; margin-top:20px; font-size:15px;'>🏫 Fasalka: ${cls.name} ($periodText)</h2>")
+
             if (clsStuds.isEmpty()) {
-                html.append("<p>No students enrolled.</p>")
+                html.append("<p style='color:#666;'>Fasalkan arday kuma jirto.</p>")
             } else {
-                html.append("<table><tr><th>Student ID</th><th>Name</th><th>Total Sessions</th><th>Days Present</th><th>Days Absent</th><th>Attendance Rate</th></tr>")
-                clsStuds.forEach { s ->
-                    val sAtt = allAtt.filter { it.studentId == s.id }
+                html.append("<h3>1. Diiwaanka Summary-ga Xaadirinta Ardayda</h3>")
+                html.append("<table><tr><th style='width:30px;'>#</th><th style='width:80px;'>Student ID</th><th>Magaca Ardayga</th><th style='width:80px;'>Wadarta</th><th style='width:80px;'>Joog (Present)</th><th style='width:80px;'>Maqan (Absent)</th><th style='width:80px;'>Rate %</th></tr>")
+                clsStuds.forEachIndexed { idx, s ->
+                    val sAtt = clsAtt.filter { it.studentId == s.id }
                     val total = sAtt.size
-                    val present = sAtt.count { it.status == "Present" }
+                    val present = sAtt.count { it.status == "Present" || it.status == "P" }
                     val absent = total - present
                     val rate = if (total > 0) (present.toDouble() / total) * 100 else 100.0
-                    html.append("<tr><td>${s.studentId}</td><td>${s.name}</td><td>$total</td><td>$present</td><td>$absent</td><td><b>${String.format("%.1f%%", rate)}</b></td></tr>")
+                    html.append("<tr><td>${idx + 1}</td><td>${s.studentId}</td><td><b>${s.name}</b></td><td>$total</td><td><span style='color:#166534; font-weight:bold;'>$present</span></td><td><span style='color:#991B1B; font-weight:bold;'>$absent</span></td><td><b>${String.format(java.util.Locale.US, "%.1f%%", rate)}</b></td></tr>")
                 }
                 html.append("</table>")
+
+                html.append("<h3>2. Diiwaanka Wakhtiga Xaadirinta Macalinka (Teacher Timing Audit)</h3>")
+                val distinctDates = clsAtt.map { it.date }.distinct().sortedDescending()
+                if (distinctDates.isEmpty()) {
+                    html.append("<p style='color:#666; font-style:italic;'>Xaadirin la sameeyay ma jirto xilligan la doortay.</p>")
+                } else {
+                    html.append("<table><tr><th style='width:100px;'>Taariikhda</th><th style='width:100px;'>Fasalka</th><th>Macalinka Xaadiriyay</th><th style='width:130px;'>Saacadda La Xaadiriyay</th><th>Xaaladda Saacadaha Shaqada</th></tr>")
+                    distinctDates.forEach { d ->
+                        val dateRecs = clsAtt.filter { it.date == d }
+                        val teacherName = dateRecs.firstOrNull { it.recordedBy.isNotBlank() }?.recordedBy?.ifBlank { "Macalin" } ?: "Macalin"
+                        val timeRecorded = dateRecs.firstOrNull { it.recordedAt.isNotBlank() }?.recordedAt?.ifBlank { "-" } ?: "-"
+                        val isOutside = isTimeOutsideWorkingHours(timeRecorded)
+                        val statusHtml = if (isOutside) {
+                            "<span class='badge-outside'>🚨 Ka baxsan saacadaha shaqada (Shift: 08:00-12:00 / 14:00-16:30)</span>"
+                        } else {
+                            "<span class='badge-ok'>✅ Saacadihii Shaqada (Official Hours)</span>"
+                        }
+                        html.append("<tr><td><b>$d</b></td><td>${cls.name}</td><td>👨‍🏫 $teacherName</td><td>⏰ <b>$timeRecorded</b></td><td>$statusHtml</td></tr>")
+                    }
+                    html.append("</table>")
+                }
             }
         }
         html.append("</body></html>")
 
-        repository.printHtmlReport(context, html.toString(), "Attendance_Summary_Report")
+        repository.printHtmlReport(context, html.toString(), "Attendance_Report_${yearMonth ?: "All"}")
     }
 
     fun printExamReportHtml(context: Context, selectedClassId: Long) {

@@ -133,6 +133,7 @@ class MainActivity : ComponentActivity() {
                             classList = classes,
                             studentList = students,
                             userList = users,
+                            attendanceList = attendance,
                             classroomsCount = classroomsCount,
                             chairsCount = chairsCount,
                             toiletsCount = toiletsCount,
@@ -375,7 +376,7 @@ class MainActivity : ComponentActivity() {
                             onPrintAllStudentsReportCards = { classId -> viewModel.printAllStudentsComprehensiveReportsHtml(context, classId) },
                             onPrintFeeReport = { viewModel.printFeeReportHtml(context) },
                             onPrintClassReport = { classId -> viewModel.printClassReportHtml(context, classId) },
-                            onPrintAttendanceReport = { classId -> viewModel.printAttendanceReportHtml(context, classId) },
+                            onPrintAttendanceReport = { classId, yearMonth -> viewModel.printAttendanceReportHtml(context, classId, yearMonth) },
                             onPrintExamReport = { classId -> viewModel.printExamReportHtml(context, classId) },
                             onOpenClearanceClick = { navController.navigate("clearance") },
                             onBackClick = { navController.popBackStack() }

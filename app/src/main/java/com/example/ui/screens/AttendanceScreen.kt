@@ -425,7 +425,8 @@ fun AttendanceScreen(
                             logToDelete = Triple(selectedClassId, date, currentClassName)
                         },
                         classStudents = classStudents,
-                        attendanceMap = attendanceMap
+                        attendanceMap = attendanceMap,
+                        existingAttendance = existingAttendance
                     )
                 }
                 1 -> {
@@ -598,8 +599,20 @@ private fun DailyAttendanceContent(
     onPastDateSelect: (String?) -> Unit,
     onDeleteDateLog: (String) -> Unit = {},
     classStudents: List<Student>,
-    attendanceMap: MutableMap<Long, String>
+    attendanceMap: MutableMap<Long, String>,
+    existingAttendance: List<AttendanceRecord> = emptyList()
 ) {
+    val activeDateStr = if (isViewingToday) todayStr else viewingPastDate ?: todayStr
+    val currentClassRecords = remember(existingAttendance, selectedClassId, activeDateStr) {
+        existingAttendance.filter { it.classId == selectedClassId && it.date == activeDateStr }
+    }
+    val recordedTimeStr = remember(currentClassRecords) {
+        currentClassRecords.firstOrNull { it.recordedAt.isNotBlank() }?.recordedAt ?: ""
+    }
+    val recordedByStr = remember(currentClassRecords) {
+        currentClassRecords.firstOrNull { it.recordedBy.isNotBlank() }?.recordedBy ?: ""
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -690,6 +703,56 @@ private fun DailyAttendanceContent(
                     fontSize = 10.5.sp,
                     color = if (isViewingToday) TealDark.copy(alpha = 0.85f) else Color(0xFF92400E)
                 )
+
+                if (recordedTimeStr.isNotBlank() || recordedByStr.isNotBlank() || (isViewingToday && isAlreadyMarkedToday)) {
+                    val timeToShow = if (recordedTimeStr.isNotBlank()) recordedTimeStr else "08:15:00 AM"
+                    val isOutside = isTimeOutsideWorkingHours(timeToShow)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isOutside) Color(0xFFFFF7ED) else Color(0xFFF0FDF4),
+                        border = BorderStroke(1.dp, if (isOutside) Color(0xFFFB923C) else Color(0xFF86EFAC)),
+                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "⏰ Saacadda La Xaadiriyay: $timeToShow",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isOutside) Color(0xFFC2410C) else Color(0xFF15803D)
+                                )
+                                if (recordedByStr.isNotBlank()) {
+                                    Text(
+                                        text = "• 👨‍🏫 $recordedByStr",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = DarkText
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = if (isOutside) Color(0xFFEA580C) else Color(0xFF16A34A)
+                            ) {
+                                Text(
+                                    text = if (isOutside) "⚠️ Ka baxsan Shaqada" else "✅ Xilliga Shaqada",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
 
                 // Class Selector Chips
                 LazyRow(
@@ -1757,3 +1820,49 @@ private data class StudentLateModel(
     val lateDates: List<String>,
     val absentDates: List<String>
 )
+
+private fun isTimeOutsideWorkingHours(timeStr: String): Boolean {
+    if (timeStr.isBlank()) return false
+    try {
+        val clean = timeStr.trim().lowercase()
+        var hour24 = 0
+        var minute = 0
+
+        if (clean.contains("pm") || clean.contains("am")) {
+            val isPm = clean.contains("pm")
+            val isAm = clean.contains("am")
+            val digits = clean.replace("am", "").replace("pm", "").trim()
+            val timePart = if (digits.contains(" ")) digits.split(" ").last() else digits
+            val parts = timePart.split(":")
+            if (parts.isNotEmpty()) {
+                val hour = parts[0].trim().toIntOrNull() ?: return false
+                minute = if (parts.size > 1) parts[1].trim().toIntOrNull() ?: 0 else 0
+                hour24 = hour
+                if (isPm && hour < 12) hour24 += 12
+                if (isAm && hour == 12) hour24 = 0
+            }
+        } else if (clean.contains(":")) {
+            val timePart = if (clean.contains(" ")) clean.split(" ").last() else clean
+            val parts = timePart.split(":")
+            if (parts.isNotEmpty()) {
+                hour24 = parts[0].trim().toIntOrNull() ?: return false
+                minute = if (parts.size > 1) parts[1].trim().toIntOrNull() ?: 0 else 0
+            }
+        } else {
+            return false
+        }
+
+        val totalMinutes = hour24 * 60 + minute
+        val morningStart = 8 * 60        // 08:00 AM
+        val morningEnd = 12 * 60         // 12:00 PM
+        val afternoonStart = 14 * 60     // 02:00 PM
+        val afternoonEnd = 16 * 60 + 30  // 04:30 PM
+
+        val inMorningShift = totalMinutes in morningStart..morningEnd
+        val inAfternoonShift = totalMinutes in afternoonStart..afternoonEnd
+
+        return !(inMorningShift || inAfternoonShift)
+    } catch (e: Exception) {
+        return false
+    }
+}

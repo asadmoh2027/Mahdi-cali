@@ -38,6 +38,29 @@ fun TransparencyDashboardScreen(
     val auditLogs by viewModel.auditLogs.collectAsState()
     val classes by viewModel.classes.collectAsState()
     val users by viewModel.users.collectAsState()
+    val allAttendance by viewModel.allAttendance.collectAsState()
+    val selectedShift by viewModel.selectedShift.collectAsState()
+
+    val todayDateStr = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()) }
+    val activeClasses = remember(classes, selectedShift) {
+        classes.filter { schoolClass ->
+            schoolClass.status == "ACTIVE" && (selectedShift == "Dhammaan" || schoolClass.shift.equals(selectedShift, ignoreCase = true))
+        }
+    }
+    val unmarkedClasses = remember(activeClasses, allAttendance, todayDateStr) {
+        activeClasses.filter { schoolClass ->
+            allAttendance.none { att ->
+                att.classId == schoolClass.id && (att.date == todayDateStr || att.date.startsWith(todayDateStr))
+            }
+        }
+    }
+    val markedClasses = remember(activeClasses, allAttendance, todayDateStr) {
+        activeClasses.filter { schoolClass ->
+            allAttendance.any { att ->
+                att.classId == schoolClass.id && (att.date == todayDateStr || att.date.startsWith(todayDateStr))
+            }
+        }
+    }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("ALL") }
@@ -138,6 +161,257 @@ fun TransparencyDashboardScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            // --- Notification Card for Unmarked Classes Today ---
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (unmarkedClasses.isNotEmpty()) Color(0xFFFFF1F2) else Color(0xFFF0FDF4)
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (unmarkedClasses.isNotEmpty()) Color(0xFFFECDD3) else Color(0xFFBBF7D0)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (unmarkedClasses.isNotEmpty()) Color(0xFFE11D48) else Color(0xFF16A34A),
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = if (unmarkedClasses.isNotEmpty()) "🔔" else "✅",
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            }
+
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "KORMEERKA XAADIRINTA MAANTA",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (unmarkedClasses.isNotEmpty()) Color(0xFF9F1239) else Color(0xFF14532D)
+                                    )
+                                    if (unmarkedClasses.isNotEmpty()) {
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = Color(0xFFE11D48)
+                                        ) {
+                                            Text(
+                                                text = "${unmarkedClasses.size} Fasal",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Text(
+                                    text = if (unmarkedClasses.isNotEmpty())
+                                        "Fasalada shaqada xaadirinta maalinlaha ah AAN la samayn maanta:"
+                                        else "Dhammaan ${activeClasses.size} fasal waa la xaadiriyay maanta!",
+                                    fontSize = 10.sp,
+                                    color = if (unmarkedClasses.isNotEmpty()) Color(0xFFBE123C) else Color(0xFF15803D),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+
+                    if (unmarkedClasses.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = Color(0xFFFECDD3).copy(alpha = 0.6f))
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(unmarkedClasses) { unClass ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                                    shadowElevation = 1.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Column {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "🏫 ${unClass.name}",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = DarkText
+                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = TealContainer.copy(alpha = 0.6f)
+                                                ) {
+                                                    Text(
+                                                        text = unClass.shift,
+                                                        fontSize = 9.sp,
+                                                        color = TealDark,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = "👨‍🏫 Macallin: ${unClass.inchargeTeacher.ifBlank { "Lama cayimin" }}",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFFBE123C),
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFFFF1F2),
+                                            border = BorderStroke(1.dp, Color(0xFFE11D48))
+                                        ) {
+                                            Text(
+                                                text = "❌ Aan Xaadirin",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFE11D48),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (markedClasses.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = Color(0xFFBBF7D0).copy(alpha = 0.6f))
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        ) {
+                            Text("✅ FASALADA LA XAADIRIYAY MAANTA (${markedClasses.size}):", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15803D))
+                        }
+
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(markedClasses) { mClass ->
+                                val classAtts = allAttendance.filter { it.classId == mClass.id && (it.date == todayDateStr || it.date.startsWith(todayDateStr)) }
+                                val recTime = classAtts.firstOrNull { it.recordedAt.isNotBlank() }?.recordedAt
+                                    ?: auditLogs.firstOrNull { it.actionCategory == "ATTENDANCE" && it.className.equals(mClass.name, ignoreCase = true) && it.timestamp.startsWith(todayDateStr) }?.timestamp?.takeLast(8)
+                                    ?: "08:00 AM"
+
+                                val recTeacher = classAtts.firstOrNull { it.recordedBy.isNotBlank() }?.recordedBy
+                                    ?: auditLogs.firstOrNull { it.actionCategory == "ATTENDANCE" && it.className.equals(mClass.name, ignoreCase = true) && it.timestamp.startsWith(todayDateStr) }?.userName
+                                    ?: mClass.inchargeTeacher.ifBlank { "Macallinka" }
+
+                                val isOutside = isTimeOutsideWorkingHours(recTime)
+
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(1.dp, if (isOutside) Color(0xFFFDBA74) else Color(0xFFA7F3D0)),
+                                    shadowElevation = 1.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Column {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "🏫 ${mClass.name}",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = DarkText
+                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = TealContainer.copy(alpha = 0.6f)
+                                                ) {
+                                                    Text(
+                                                        text = mClass.shift,
+                                                        fontSize = 9.sp,
+                                                        color = TealDark,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = "👨‍🏫 Macallin: $recTeacher",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF15803D),
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = "⏰ Saacadda: $recTime",
+                                                fontSize = 10.sp,
+                                                color = if (isOutside) Color(0xFFC2410C) else DarkText,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (isOutside) Color(0xFFFFEDD5) else Color(0xFFDCFCE7),
+                                            border = BorderStroke(1.dp, if (isOutside) Color(0xFFF97316) else Color(0xFF16A34A))
+                                        ) {
+                                            Text(
+                                                text = if (isOutside) "⚠️ Ka baxsan Shaqada" else "✅ La Xaadiriyay",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isOutside) Color(0xFFC2410C) else Color(0xFF15803D),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // --- Compact Search & Filters Toolbar ---
             Card(
                 modifier = Modifier
@@ -671,5 +945,51 @@ fun AuditLogCard(
                 )
             }
         }
+    }
+}
+
+private fun isTimeOutsideWorkingHours(timeStr: String): Boolean {
+    if (timeStr.isBlank()) return false
+    try {
+        val clean = timeStr.trim().lowercase()
+        var hour24 = 0
+        var minute = 0
+
+        if (clean.contains("pm") || clean.contains("am")) {
+            val isPm = clean.contains("pm")
+            val isAm = clean.contains("am")
+            val digits = clean.replace("am", "").replace("pm", "").trim()
+            val timePart = if (digits.contains(" ")) digits.split(" ").last() else digits
+            val parts = timePart.split(":")
+            if (parts.isNotEmpty()) {
+                val hour = parts[0].trim().toIntOrNull() ?: return false
+                minute = if (parts.size > 1) parts[1].trim().toIntOrNull() ?: 0 else 0
+                hour24 = hour
+                if (isPm && hour < 12) hour24 += 12
+                if (isAm && hour == 12) hour24 = 0
+            }
+        } else if (clean.contains(":")) {
+            val timePart = if (clean.contains(" ")) clean.split(" ").last() else clean
+            val parts = timePart.split(":")
+            if (parts.isNotEmpty()) {
+                hour24 = parts[0].trim().toIntOrNull() ?: return false
+                minute = if (parts.size > 1) parts[1].trim().toIntOrNull() ?: 0 else 0
+            }
+        } else {
+            return false
+        }
+
+        val totalMinutes = hour24 * 60 + minute
+        val morningStart = 8 * 60        // 08:00 AM
+        val morningEnd = 12 * 60         // 12:00 PM
+        val afternoonStart = 14 * 60     // 02:00 PM
+        val afternoonEnd = 16 * 60 + 30  // 04:30 PM
+
+        val inMorningShift = totalMinutes in morningStart..morningEnd
+        val inAfternoonShift = totalMinutes in afternoonStart..afternoonEnd
+
+        return !(inMorningShift || inAfternoonShift)
+    } catch (e: Exception) {
+        return false
     }
 }
