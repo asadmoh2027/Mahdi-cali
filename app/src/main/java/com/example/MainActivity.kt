@@ -179,7 +179,10 @@ class MainActivity : ComponentActivity() {
                                 viewModel.addClass(name, teacher, start, end, shift)
                             },
                             onDeleteClassClick = { id ->
-                                viewModel.deleteClass(id)
+                                val cls = classes.find { it.id == id }
+                                if (cls != null) {
+                                    viewModel.softDeleteClass(cls)
+                                }
                             },
                             onBackClick = { navController.popBackStack() }
                         )
@@ -207,7 +210,12 @@ class MainActivity : ComponentActivity() {
                             onExportStudentsListMarkCsv = { classId, subject, examTitle, maxMarks ->
                                 viewModel.exportStudentsListMarkCsv(this@MainActivity, classId, subject, examTitle, maxMarks)
                             },
-                            onDeleteStudentClick = { id -> viewModel.deleteStudent(id) },
+                            onDeleteStudentClick = { id ->
+                                val student = students.find { it.id == id }
+                                if (student != null) {
+                                    viewModel.softDeleteStudent(student)
+                                }
+                            },
                             onDeleteAllClassStudentsClick = { classId -> viewModel.deleteClassStudents(classId) },
                             onToggleFreeClick = { id, isFree -> viewModel.toggleStudentFree(id, isFree) },
                             schoolName = schoolName,

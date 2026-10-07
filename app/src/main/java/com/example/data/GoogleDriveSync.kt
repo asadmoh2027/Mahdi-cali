@@ -119,6 +119,22 @@ function doGet(e) {
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                var response = chain.proceed(request)
+                var followUpCount = 0
+                while ((response.code == 301 || response.code == 302 || response.code == 303 || response.code == 307 || response.code == 308) && followUpCount < 5) {
+                    val location = response.header("Location") ?: break
+                    response.close()
+                    val newRequest = request.newBuilder()
+                        .url(location)
+                        .method(request.method, request.body)
+                        .build()
+                    response = chain.proceed(newRequest)
+                    followUpCount++
+                }
+                response
+            }
             .build()
     }
 

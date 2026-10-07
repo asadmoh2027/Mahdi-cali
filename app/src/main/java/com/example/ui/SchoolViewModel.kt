@@ -1786,14 +1786,15 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
             return
         }
         viewModelScope.launch {
-            val classStudents = students.value.filter { it.classId == classId }
+            val classStudents = students.value.filter { it.classId == classId && it.status != "DELETED" }
+            val user = _currentUser.value?.fullName ?: "Admin"
             var count = 0
             classStudents.forEach { s ->
-                repository.deleteStudent(s.id)
+                repository.softDeleteStudent(s, user)
                 count++
             }
             triggerAutoInternetSync(getApplication(), forceImmediate = true)
-            _uiMessage.emit("Fasalka waa laga saaray dhammaan ardaydii ku jirtay ($count arday)!")
+            _uiMessage.emit("Fasalka waa laga saaray dhammaan ardaydii ku jirtay ($count arday) oo loo wareejiyay Qashin-qubka!")
         }
     }
 
