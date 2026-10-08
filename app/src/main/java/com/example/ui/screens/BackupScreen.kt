@@ -945,7 +945,7 @@ private fun GoogleDriveAndScriptTab(
                 }
             }
         } else {
-            items(backupRecords) { record ->
+            items(backupRecords, key = { it.id }) { record ->
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1269,7 +1269,7 @@ private fun RecycleBinTab(
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(items) { item ->
+                items(items, key = { it.id }) { item ->
                     Card(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1356,7 +1356,7 @@ private fun AuditAndGradeHistoryTab(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(markHistories) { h ->
+                    items(markHistories, key = { it.id }) { h ->
                         Card(
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1392,7 +1392,7 @@ private fun AuditAndGradeHistoryTab(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(auditLogs) { log ->
+                    items(auditLogs, key = { it.id }) { log ->
                         Card(
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

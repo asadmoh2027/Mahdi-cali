@@ -395,6 +395,25 @@ abstract class SchoolDatabase : RoomDatabase() {
     private class SchoolDatabaseCallback(
         private val scope: CoroutineScope
     ) : RoomDatabase.Callback() {
+        override fun onOpen(db: SupportSQLiteDatabase) {
+            super.onOpen(db)
+            try {
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_students_classId ON students(classId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_students_status ON students(status)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_attendance_studentId ON attendance(studentId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_attendance_classId ON attendance(classId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_exam_marks_examId ON exam_marks(examId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_exam_marks_studentId ON exam_marks(studentId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_exams_classId ON exams(classId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_fee_records_studentId ON fee_records(studentId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_fee_records_classId ON fee_records(classId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp)")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
             INSTANCE?.let { database ->

@@ -1,10 +1,18 @@
 package com.example.data
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
 import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
 import android.print.PrintManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -837,37 +845,122 @@ class SchoolRepository(private val db: SchoolDatabase) {
         private val activeWebViews = java.util.Collections.synchronizedList(mutableListOf<WebView>())
     }
 
+    private fun findActivity(context: Context): Activity? {
+        var ctx = context
+        while (ctx is ContextWrapper) {
+            if (ctx is Activity) return ctx
+            ctx = ctx.baseContext
+        }
+        return null
+    }
+
     fun printHtml(context: Context, htmlContent: String, jobName: String) {
         val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
         mainHandler.post {
             try {
-                val webView = WebView(context)
+                val activity = findActivity(context) ?: (context as? Activity)
+                val targetContext = activity ?: context
+                val printManager = targetContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                if (printManager == null) {
+                    Toast.makeText(context, "Adeegga daabacaaddu ma shaqaynayo qalabkan (Print Service unavailable)", Toast.LENGTH_LONG).show()
+                    return@post
+                }
+
+                val webView = WebView(targetContext)
                 activeWebViews.add(webView)
+
+                // Configure WebView settings for reliable rendering
+                webView.settings.apply {
+                    javaScriptEnabled = false
+                    loadWithOverviewMode = true
+                    useWideViewPort = true
+                }
+
+                var hasPrinted = false
+
                 webView.webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
+                        if (hasPrinted) return
+                        hasPrinted = true
+
                         try {
-                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                            val printAdapter = webView.createPrintDocumentAdapter(jobName)
-                            if (printManager != null) {
-                                printManager.print(jobName, printAdapter, PrintAttributes.Builder().build())
+                            val originalAdapter = webView.createPrintDocumentAdapter(jobName)
+                            val safeAdapter = object : PrintDocumentAdapter() {
+                                override fun onStart() {
+                                    try {
+                                        originalAdapter.onStart()
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+
+                                override fun onLayout(
+                                    oldAttributes: PrintAttributes?,
+                                    newAttributes: PrintAttributes?,
+                                    cancellationSignal: CancellationSignal?,
+                                    callback: LayoutResultCallback?,
+                                    extras: Bundle?
+                                ) {
+                                    try {
+                                        originalAdapter.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        callback?.onLayoutFailed(e.message)
+                                    }
+                                }
+
+                                override fun onWrite(
+                                    pages: Array<out PageRange>?,
+                                    destination: ParcelFileDescriptor?,
+                                    cancellationSignal: CancellationSignal?,
+                                    callback: WriteResultCallback?
+                                ) {
+                                    try {
+                                        originalAdapter.onWrite(pages, destination, cancellationSignal, callback)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        callback?.onWriteFailed(e.message)
+                                    }
+                                }
+
+                                override fun onFinish() {
+                                    try {
+                                        originalAdapter.onFinish()
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    } finally {
+                                        activeWebViews.remove(webView)
+                                        try {
+                                            webView.destroy()
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                }
                             }
+
+                            val printAttributes = PrintAttributes.Builder()
+                                .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                                .setColorMode(PrintAttributes.COLOR_MODE_COLOR)
+                                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                                .build()
+
+                            printManager.print(jobName, safeAdapter, printAttributes)
                         } catch (e: Exception) {
                             e.printStackTrace()
-                        } finally {
-                            // Delay removing to allow the print dialog to open and bind to it safely
-                            mainHandler.postDelayed({
-                                try {
-                                    activeWebViews.remove(webView)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }, 60000) // Keep strong reference for 60 seconds
+                            activeWebViews.remove(webView)
+                            try {
+                                webView.destroy()
+                            } catch (ignored: Exception) {}
+                            Toast.makeText(context, "Cillad daabacaad: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
-                webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+
+                webView.loadDataWithBaseURL("about:blank", htmlContent, "text/html", "UTF-8", null)
             } catch (e: Exception) {
                 e.printStackTrace()
+                Toast.makeText(context, "Cillad daabacaadda: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         }
     }

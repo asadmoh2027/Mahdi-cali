@@ -998,9 +998,9 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         if (shift.equals("Dhammaan", ignoreCase = true) || shift.isBlank()) {
             studList
         } else {
+            val classShiftMap = classList.associate { it.id to it.shift }
             studList.filter { student ->
-                val cls = classList.find { it.id == student.classId }
-                student.shift.equals(shift, ignoreCase = true) || cls?.shift?.equals(shift, ignoreCase = true) == true
+                student.shift.equals(shift, ignoreCase = true) || classShiftMap[student.classId]?.equals(shift, ignoreCase = true) == true
             }
         }
     }.stateIn(
@@ -2287,10 +2287,12 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
     fun getSchoolLogoBase64(context: Context): String {
         cachedLogoBase64?.let { return it }
         return try {
-            val bitmap = android.graphics.BitmapFactory.decodeResource(context.resources, com.example.R.drawable.school_logo)
-            if (bitmap != null) {
+            val original = android.graphics.BitmapFactory.decodeResource(context.resources, com.example.R.drawable.school_logo)
+            if (original != null) {
+                val size = 120
+                val scaled = android.graphics.Bitmap.createScaledBitmap(original, size, size, true)
                 val stream = java.io.ByteArrayOutputStream()
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, stream)
+                scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, stream)
                 val bytes = stream.toByteArray()
                 val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
                 cachedLogoBase64 = base64
@@ -2863,6 +2865,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         html.append("</body></html>")
 
+        repository.printHtmlReport(context, html.toString(), "Warbixinta_Guud_Ee_Dugsiga")
     }
 
     fun printClassReportHtml(context: Context, selectedClassId: Long) {
@@ -3432,12 +3435,18 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         } else {
             classes.value
         }
-        val targetStudents = students.value.filter { s -> targetClasses.any { it.id == s.classId } && s.status == "ACTIVE" }
+        val targetStudents = students.value.filter { s ->
+            (classId == 0L || s.classId == classId) &&
+            (s.status.isBlank() || s.status.equals("ACTIVE", ignoreCase = true)) &&
+            !s.isDeleted
+        }
 
         if (targetStudents.isEmpty()) {
-            viewModelScope.launch { _uiMessage.emit("Arday ma joogaan fasalka la doortay.") }
+            viewModelScope.launch { _uiMessage.emit("Arday firfircoon ma joogaan fasalka la doortay.") }
             return
         }
+
+        viewModelScope.launch { _uiMessage.emit("Waxaa la diyaarinayaa warqadaha ${targetStudents.size} arday...") }
 
         val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
         val logoBase64 = getSchoolLogoBase64(context)
@@ -3643,12 +3652,18 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         } else {
             classes.value
         }
-        val targetStudents = students.value.filter { s -> targetClasses.any { it.id == s.classId } && s.status == "ACTIVE" }
+        val targetStudents = students.value.filter { s ->
+            (classId == 0L || s.classId == classId) &&
+            (s.status.isBlank() || s.status.equals("ACTIVE", ignoreCase = true)) &&
+            !s.isDeleted
+        }
 
         if (targetStudents.isEmpty()) {
-            viewModelScope.launch { _uiMessage.emit("Arday ma joogaan fasalka la doortay.") }
+            viewModelScope.launch { _uiMessage.emit("Arday firfircoon ma joogaan fasalka la doortay.") }
             return
         }
+
+        viewModelScope.launch { _uiMessage.emit("Waxaa la diyaarinayaa warqadaha ${targetStudents.size} arday...") }
 
         val logoBase64 = getSchoolLogoBase64(context)
         val nowDateTimeCLR = getCurrentDateTimeStr()
@@ -3820,12 +3835,18 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         } else {
             classes.value
         }
-        val targetStudents = students.value.filter { s -> targetClasses.any { it.id == s.classId } && s.status == "ACTIVE" }
+        val targetStudents = students.value.filter { s ->
+            (classId == 0L || s.classId == classId) &&
+            (s.status.isBlank() || s.status.equals("ACTIVE", ignoreCase = true)) &&
+            !s.isDeleted
+        }
 
         if (targetStudents.isEmpty()) {
-            viewModelScope.launch { _uiMessage.emit("Arday ma joogaan fasalka la doortay.") }
+            viewModelScope.launch { _uiMessage.emit("Arday firfircoon ma joogaan fasalka la doortay.") }
             return
         }
+
+        viewModelScope.launch { _uiMessage.emit("Waxaa la diyaarinayaa warbixin-sanadeedka ${targetStudents.size} arday...") }
 
         val schoolHeader = schoolName.value.ifBlank { "MAHDI CALI SCHOOL" }
         val nowDateTime = getCurrentDateTimeStr()

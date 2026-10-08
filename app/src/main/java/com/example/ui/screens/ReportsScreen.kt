@@ -51,7 +51,7 @@ fun ReportsScreen(
     onBackClick: () -> Unit
 ) {
     var schoolNameInput by remember(schoolName) { mutableStateOf(schoolName) }
-    var selectedStudentId by remember { mutableStateOf<Long?>(students.firstOrNull()?.id) }
+    var selectedStudentId by remember(students) { mutableStateOf<Long?>(students.firstOrNull()?.id) }
     var selectedClassReportId by remember { mutableLongStateOf(0L) }
     var selectedAttMonthFilter by remember { mutableStateOf<String?>(null) }
     var showFacilityDialog by remember { mutableStateOf(false) }
@@ -419,7 +419,7 @@ fun ReportsScreen(
                             ) {
                                 Button(
                                     onClick = {
-                                        val st = students.find { it.id == selectedStudentId }
+                                        val st = students.find { it.id == selectedStudentId } ?: students.firstOrNull()
                                         if (st != null) onPrintSingleStudentReport(st)
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
@@ -433,8 +433,8 @@ fun ReportsScreen(
 
                                 Button(
                                     onClick = {
-                                        val st = students.find { it.id == selectedStudentId }
-                                        val classId = st?.classId ?: 0L
+                                        val st = students.find { it.id == selectedStudentId } ?: students.firstOrNull()
+                                        val classId = st?.classId ?: selectedClassReportId
                                         onPrintAllStudentsReportCards(classId)
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = TealDark),
@@ -552,6 +552,18 @@ fun ReportsScreen(
                             Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("🖨️ Print Class Exam Results Report", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = { onPrintAllStudentsReportCards(selectedClassReportId) },
+                            colors = ButtonDefaults.buttonColors(containerColor = TealDark),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            val cName = classes.find { it.id == selectedClassReportId }?.name ?: "Dhamaan Fasalada (All)"
+                            Text("📚 DAABAC DHAMAAN WARBIXIN-SANADEEDKA FASALKA ($cName)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

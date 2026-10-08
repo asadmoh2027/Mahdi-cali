@@ -262,7 +262,7 @@ fun PromotionScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(promotionDataList) { data ->
+                    items(promotionDataList, key = { it.student.id }) { data ->
                         val student = data.student
                         val isPass = data.isAnnualPass
 

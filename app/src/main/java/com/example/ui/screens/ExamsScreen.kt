@@ -121,7 +121,7 @@ fun ExamsScreen(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(visibleExams) { exam ->
+                    items(visibleExams, key = { it.id }) { exam ->
                         val clsName = classes.find { it.id == exam.classId }?.name ?: "Unknown Class"
                         Card(
                             shape = RoundedCornerShape(14.dp),
@@ -653,7 +653,7 @@ fun EditMarksScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    items(students) { student ->
+                    items(students, key = { it.id }) { student ->
                         val isAbsent = absentMap[student.id] == true
                         val currentScoreStr = scoreMap[student.id] ?: ""
 

@@ -162,7 +162,7 @@ fun ClassesScreen(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(filteredClasses) { cls ->
+                    items(filteredClasses, key = { it.id }) { cls ->
                         val isAssignedToMe = isTeacher && (currentUser?.getAssignedClassIdSet()?.contains(cls.id) == true)
 
                         Card(

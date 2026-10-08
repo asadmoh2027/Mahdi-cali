@@ -62,25 +62,8 @@ fun StudentMarksheetScreen(
 ) {
     val context = LocalContext.current
 
-    // Restrict Marksheet / Warqadda Ardayga to Classes 1 to 4 (Fasalada 1aad ilaa 4aad)
-    fun isGrade1To4(className: String): Boolean {
-        val digits = className.filter { it.isDigit() }
-        val num = digits.toIntOrNull()
-        if (num != null) return num in 1..4
-        val lower = className.lowercase()
-        return lower.contains("1") || lower.contains("2") || lower.contains("3") || lower.contains("4") ||
-               lower.contains("kow") || lower.contains("laba") || lower.contains("saddex") || lower.contains("afar")
-    }
-
-    val eligibleClasses = remember(classes) {
-        val filtered = classes.filter { isGrade1To4(it.name) }
-        if (filtered.isNotEmpty()) filtered else classes
-    }
-
-    val eligibleStudents = remember(students, eligibleClasses) {
-        val filtered = students.filter { s -> eligibleClasses.any { it.id == s.classId } }
-        if (filtered.isNotEmpty()) filtered else students
-    }
+    val eligibleClasses = classes
+    val eligibleStudents = students
 
     var selectedStudentId by remember(eligibleStudents) { mutableStateOf(eligibleStudents.firstOrNull()?.id ?: 0L) }
     val currentStudent = eligibleStudents.find { it.id == selectedStudentId } ?: eligibleStudents.firstOrNull()
