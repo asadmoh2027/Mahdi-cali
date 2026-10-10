@@ -47,6 +47,8 @@ fun AttendanceScreen(
     onPrintStudentLateWarning: (Student, List<AttendanceRecord>, String) -> Unit = { _, _, _ -> },
     onPrintClassLateReport: (Long, String?) -> Unit = { _, _ -> },
     onExportClassLateReportCsv: (Long, String?) -> Unit = { _, _ -> },
+    onPrintStudentMonthlyAttendance: (Student, String) -> Unit = { _, _ -> },
+    onPrintStudentTermAttendance: (Student) -> Unit = {},
     onDeleteAttendanceLog: (Long, String) -> Unit = { _, _ -> },
     onBackClick: () -> Unit
 ) {
@@ -246,7 +248,7 @@ fun AttendanceScreen(
                                 text = "Ardayda: ${classStudents.size}  •  🟢 $presentCount  🔴 $absentCount  🟠 $lateCount",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = DarkText
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = if (isAlreadyMarkedToday) "✓ Maanta waa la keydiyay (Hal mar)" else "● Diyaar u ah in la keydiyo",
@@ -426,7 +428,10 @@ fun AttendanceScreen(
                         },
                         classStudents = classStudents,
                         attendanceMap = attendanceMap,
-                        existingAttendance = existingAttendance
+                        existingAttendance = existingAttendance,
+                        selectedYearMonth = selectedYearMonth,
+                        onPrintStudentMonthlyAttendance = onPrintStudentMonthlyAttendance,
+                        onPrintStudentTermAttendance = onPrintStudentTermAttendance
                     )
                 }
                 1 -> {
@@ -458,7 +463,9 @@ fun AttendanceScreen(
                             logToDelete = Triple(selectedClassId, date, currentClassName)
                         },
                         onPrintMonthlySheet = { onPrintMonthlySheet(selectedClassId, selectedYearMonth) },
-                        onExportMonthlyCsv = { onExportMonthlyCsv(selectedClassId, selectedYearMonth) }
+                        onExportMonthlyCsv = { onExportMonthlyCsv(selectedClassId, selectedYearMonth) },
+                        onPrintStudentMonthlyAttendance = onPrintStudentMonthlyAttendance,
+                        onPrintStudentTermAttendance = onPrintStudentTermAttendance
                     )
                 }
                 2 -> {
@@ -469,6 +476,9 @@ fun AttendanceScreen(
                         onClassSelect = { selectedClassId = it },
                         allStudents = students,
                         existingAttendance = existingAttendance,
+                        selectedYearMonth = selectedYearMonth,
+                        onPrintStudentMonthlyAttendance = onPrintStudentMonthlyAttendance,
+                        onPrintStudentTermAttendance = onPrintStudentTermAttendance,
                         onPrintWarning = { student, sRecords, clsName ->
                             onPrintStudentLateWarning(student, sRecords, clsName)
                         },
@@ -512,7 +522,7 @@ fun AttendanceScreen(
                     text = "Tirtir Xaadirinta Maalinta?",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = DarkText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
             },
@@ -526,7 +536,7 @@ fun AttendanceScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("🏫 Fasalka: $cName", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                            Text("🏫 Fasalka: $cName", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Text("📅 Taariikhda: $dStr", fontSize = 12.sp, color = TealDark, fontWeight = FontWeight.SemiBold)
                             Text("👥 Diiwaanka la tirtirayo: $recordsCount diiwaan", fontSize = 12.sp, color = MutedText)
                         }
@@ -578,7 +588,7 @@ fun AttendanceScreen(
                     onClick = { logToDelete = null },
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Jooji (Cancel)", color = DarkText, fontSize = 12.sp)
+                    Text("Jooji (Cancel)", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
                 }
             }
         )
@@ -600,7 +610,10 @@ private fun DailyAttendanceContent(
     onDeleteDateLog: (String) -> Unit = {},
     classStudents: List<Student>,
     attendanceMap: MutableMap<Long, String>,
-    existingAttendance: List<AttendanceRecord> = emptyList()
+    existingAttendance: List<AttendanceRecord> = emptyList(),
+    selectedYearMonth: String = "",
+    onPrintStudentMonthlyAttendance: (Student, String) -> Unit = { _, _ -> },
+    onPrintStudentTermAttendance: (Student) -> Unit = {}
 ) {
     val activeDateStr = if (isViewingToday) todayStr else viewingPastDate ?: todayStr
     val currentClassRecords = remember(existingAttendance, selectedClassId, activeDateStr) {
@@ -733,7 +746,7 @@ private fun DailyAttendanceContent(
                                         text = "• 👨‍🏫 $recordedByStr",
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = DarkText
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -803,7 +816,7 @@ private fun DailyAttendanceContent(
                                 text = "Maanta ($todayStr)",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isViewingToday) Color.White else DarkText,
+                                color = if (isViewingToday) Color.White else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                             )
                         }
@@ -831,7 +844,7 @@ private fun DailyAttendanceContent(
                                     text = pDate,
                                     fontSize = 10.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.White else DarkText
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -920,7 +933,7 @@ private fun DailyAttendanceContent(
                                     text = student.name,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = DarkText
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "ID: ${student.studentId} • Xaalad: $fullLabel ${if (isViewingToday) "(Taabo badhanka)" else "(Locked)"}",
@@ -929,23 +942,56 @@ private fun DailyAttendanceContent(
                                 )
                             }
 
-                            // Interactive Cycling Status Button (Active for Today)
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = badgeColor,
-                                shadowElevation = if (isViewingToday) 2.dp else 0.dp,
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .then(
-                                        if (isViewingToday) {
-                                            Modifier.clickable {
-                                                attendanceMap[student.id] = nextStatus
-                                            }
-                                        } else {
-                                            Modifier
-                                        }
-                                    )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                // Quick Print Attendance: Bisha (Month)
+                                IconButton(
+                                    onClick = {
+                                        val mStr = if (selectedYearMonth.isNotBlank()) selectedYearMonth else todayStr.take(7)
+                                        onPrintStudentMonthlyAttendance(student, mStr)
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Print,
+                                        contentDescription = "Daabac Bisha",
+                                        tint = TealPrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                // Quick Print Attendance: Teeramka (Term)
+                                IconButton(
+                                    onClick = { onPrintStudentTermAttendance(student) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Assessment,
+                                        contentDescription = "Daabac Teeramka",
+                                        tint = Color(0xFF0284C7),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                // Interactive Cycling Status Button (Active for Today)
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = badgeColor,
+                                    shadowElevation = if (isViewingToday) 2.dp else 0.dp,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .then(
+                                            if (isViewingToday) {
+                                                Modifier.clickable {
+                                                    attendanceMap[student.id] = nextStatus
+                                                }
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
+                                ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
                                         text = shortLabel,
@@ -961,6 +1007,7 @@ private fun DailyAttendanceContent(
             }
         }
     }
+}
 }
 
 @Composable
@@ -979,7 +1026,9 @@ private fun MonthlyAttendanceSheetContent(
     onToggleViewMode: (Int) -> Unit,
     onDeleteDateLog: (String) -> Unit = {},
     onPrintMonthlySheet: () -> Unit,
-    onExportMonthlyCsv: () -> Unit
+    onExportMonthlyCsv: () -> Unit,
+    onPrintStudentMonthlyAttendance: (Student, String) -> Unit = { _, _ -> },
+    onPrintStudentTermAttendance: (Student) -> Unit = {}
 ) {
     val totalPres = monthAttendanceRecords.count { it.status == "Present" || it.status == "P" }
     val totalAbs = monthAttendanceRecords.count { it.status == "Absent" || it.status == "A" }
@@ -1116,7 +1165,7 @@ private fun MonthlyAttendanceSheetContent(
                 text = "Shaxda Xaadirinta Bisha ($selectedYearMonth)",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkText
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1224,8 +1273,8 @@ private fun MonthlyAttendanceSheetContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text("${idx + 1}", fontSize = 11.sp, modifier = Modifier.width(30.dp), textAlign = TextAlign.Center, color = MutedText)
-                                Text(student.studentId, fontSize = 10.5.sp, modifier = Modifier.width(70.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold, color = DarkText)
-                                Text(student.name, fontSize = 11.sp, modifier = Modifier.width(140.dp), fontWeight = FontWeight.Bold, color = DarkText, maxLines = 1)
+                                Text(student.studentId, fontSize = 10.5.sp, modifier = Modifier.width(70.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(student.name, fontSize = 11.sp, modifier = Modifier.width(140.dp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
 
                                 distinctMonthDates.forEach { d ->
                                     val rec = sRecords.find { it.date == d }
@@ -1307,22 +1356,38 @@ private fun MonthlyAttendanceSheetContent(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(student.name, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(student.name, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                     Text("ID: ${student.studentId} • Fasal: ${student.gender}", fontSize = 11.sp, color = MutedText)
                                 }
 
-                                Surface(
-                                    color = if (pct >= 75) PassGreen else FailRed,
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = String.format(Locale.US, "%.0f%% Rate", pct),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                    )
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    IconButton(
+                                        onClick = { onPrintStudentMonthlyAttendance(student, selectedYearMonth) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Print, contentDescription = "Daabac Bisha", tint = TealPrimary, modifier = Modifier.size(17.dp))
+                                    }
+
+                                    IconButton(
+                                        onClick = { onPrintStudentTermAttendance(student) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Assessment, contentDescription = "Daabac Teeramka", tint = Color(0xFF0284C7), modifier = Modifier.size(17.dp))
+                                    }
+
+                                    Surface(
+                                        color = if (pct >= 75) PassGreen else FailRed,
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = String.format(Locale.US, "%.0f%% Rate", pct),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
                                 }
                             }
 
@@ -1358,6 +1423,9 @@ private fun StudentLateTrackerContent(
     onClassSelect: (Long) -> Unit,
     allStudents: List<Student>,
     existingAttendance: List<AttendanceRecord>,
+    selectedYearMonth: String = "",
+    onPrintStudentMonthlyAttendance: (Student, String) -> Unit = { _, _ -> },
+    onPrintStudentTermAttendance: (Student) -> Unit = {},
     onPrintWarning: (Student, List<AttendanceRecord>, String) -> Unit,
     onPrintClassReport: (Long) -> Unit,
     onExportCsv: (Long) -> Unit
@@ -1462,7 +1530,7 @@ private fun StudentLateTrackerContent(
                 Icon(
                     imageVector = Icons.Default.Sort,
                     contentDescription = if (sortByMostLate) "Ugu Habsan Badan" else "A-Z",
-                    tint = if (sortByMostLate) Color(0xFFB45309) else DarkText,
+                    tint = if (sortByMostLate) Color(0xFFB45309) else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -1648,7 +1716,7 @@ private fun StudentLateTrackerContent(
                                             text = item.student.name,
                                             fontSize = 13.5.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = DarkText,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             maxLines = 1
                                         )
                                         Row(
@@ -1747,23 +1815,49 @@ private fun StudentLateTrackerContent(
                                         .padding(8.dp),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Row(
+                                    Column(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Text("📅 Diiwaanka Taariikheed ee Habsanka & Maqnaanshaha:", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = DarkText)
-                                        // Quick print button
-                                        TextButton(
-                                            onClick = {
-                                                val sRecs = filteredAttendance.filter { it.studentId == item.student.id }
-                                                onPrintWarning(item.student, sRecs, selectedClassName)
-                                            },
-                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                        Text("📅 Diiwaanka Taariikheed ee Habsanka & Maqnaanshaha:", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color(0xFFB45309))
-                                            Spacer(modifier = Modifier.width(2.dp))
-                                            Text("Daabac Warqadda", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                                            OutlinedButton(
+                                                onClick = { onPrintStudentMonthlyAttendance(item.student, selectedYearMonth) },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(12.dp), tint = TealPrimary)
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text("📅 Bisha (PDF)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
+                                            }
+
+                                            OutlinedButton(
+                                                onClick = { onPrintStudentTermAttendance(item.student) },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color(0xFF0284C7))
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text("🎓 Teeramka (PDF)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0284C7))
+                                            }
+
+                                            TextButton(
+                                                onClick = {
+                                                    val sRecs = filteredAttendance.filter { it.studentId == item.student.id }
+                                                    onPrintWarning(item.student, sRecs, selectedClassName)
+                                                },
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                                modifier = Modifier.height(28.dp)
+                                            ) {
+                                                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color(0xFFB45309))
+                                                Spacer(modifier = Modifier.width(2.dp))
+                                                Text("⚠️ Digniin", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                                            }
                                         }
                                     }
 

@@ -1,0 +1,130 @@
+================================================================================
+          MAHDI CALI SCHOOL MANAGEMENT SYSTEM - COMPLETE SPECIFICATION & PROMPT
+================================================================================
+
+1. GUUDMAR & UJEEDDADA NIDAAMKA (SYSTEM OVERVIEW)
+--------------------------------------------------------------------------------
+Magaca App-ka: Mahdi Cali School Management System
+Madasha (Platform): Native Android (Kotlin & Jetpack Compose)
+Nooca Nidaamka: Offline-First, Secure, Enterprise School ERP & Student Portal
+Qaybaha Isticmaalayaasha:
+  1. Maamulaha Dugsiga (Principal / Admin) - Awood buuxda oo maamul.
+  2. Super Admin (System Owner / IT) - Maamulka heer sare ee xisaabaadka.
+  3. Macallimiinta (Teachers) - Diiwaangelinta xaadirinta & buundooyinka fasallada.
+  4. Khasnajiga (Cashier) - Maamulka lacag-bixinta ardayda & rasiidhada.
+  5. Ardayda & Waalidiinta (Portal) - Baadhitaanka natiijada & kaadhadhka warbixinta.
+
+
+2. QAAB-DHISMEEDKA FARSAMO & TIGNOOLAJIYADA (ARCHITECTURE & TECH STACK)
+--------------------------------------------------------------------------------
+- Hannaanka Software-ka: MVVM (Model-View-ViewModel) + Repository Pattern + Clean Data Layer.
+- Luuqadda: Kotlin 100%.
+- UI Framework: Jetpack Compose oo ku salaysan Material Design 3 (M3).
+- Keydinta Gudaha (Local DB): Room Database (SQLite) oo leh B-Tree Performance Indexes
+  (idx_students_classId, idx_attendance_studentId, idx_exam_marks_examId, iwm.)
+  si xogtu u noqoto mid aad u dheeraysa xataa marka ardaydu gaadhaan kumanaan.
+- Nidaamka Soft-Delete: Xogta lama tirtiro si toos ah, balse waxaa loo diraa
+  Recycle Bin (Qashin-qubka) oo dib looga soo celin karo.
+- Keydinta Daruuraha (Cloud Storage):
+  1. Google Drive Web App Script: Hal-taabasho oo xogta oo dhan JSON loogu shubo
+     ama looga soo dejiyo Google Drive.
+  2. Cloud Auto-Sync: Is-waafajinta xogta xilliga dhabta ah marka internet jiro.
+- Nidaamka Daabacaadda & PDF (Print Engine):
+  Android Print Spooler oo leh PrintDocumentAdapter wrapper ilaalinaya xusuusta
+  (Memory Leak-free & GC-protected), kaas oo taageera A4 Format, kala-jebinta
+  bogagga (page-break), astaanta dugsiga oo optimized ah (120x120px), Serial Code,
+  iyo shaambadaha rasmiga ah.
+
+
+3. QAYBAHA & SHAQOOYINKA MUHIIMKA AH (CORE MODULES & FEATURES)
+--------------------------------------------------------------------------------
+
+A. XAKAMAYNTA DOORKA & GELITAANKA (AUTHENTICATION & RBAC)
+  - Maamulidda akoonnada: Administrator, Teacher, Cashier, Super Admin.
+  - Xannibaadda awoodaha (Permission Gates): Macallimiintu ma tirtiri karaan
+    fasallo ama arday, mana abuuri karaan khidmado cusub.
+  - Akoonno qarsoon iyo qufulka xisaabaadka shaqaalaha shaqada ka tagay.
+
+B. MAAMULKA ARDAYDA (STUDENT MANAGEMENT)
+  - Soo-saarista tooska ah ee ID-ga gaarka ah (tusaale: AUTO-001, AUTO-002).
+  - Diiwaangelinta: Magaca, Hooyada, Taleefanka waalidka, Fasalka, Geliinka.
+  - Calaamadaynta ardayda deeqda waxbarasho haysata (Scholarship / Free).
+  - Shaandhaynta tooska ah (Search by Name, Roll ID, ama Class).
+  - Tirtiridda wadajirka ah (Bulk Delete) ee fasalka oo dhan hal mar oo maamuluhu samayn karo.
+
+C. FASALADA & GELIINNADA (CLASSES & SHIFTS)
+  - Kala saaridda geliinnada: Gelin Hore (Morning), Gelin Danbe (Afternoon), Dhammaan (All).
+  - Xilsaarka macallinka fasalka (Incharge Teacher).
+  - Tirakoobka agabka dugsiga: Fasalada, Kuraasta, Musqulaha, Xafiisyada, iyo Jikada Cuntada.
+
+D. XAADIRINTA & DABAGALKA WAKHTIGA (ATTENDANCE & AUDIT)
+  - 4 Xaaladood oo xaadirin ah: Jooga (Present), Maqan (Absent), Habsan (Late), Fasax (Free).
+  - Transparency & Audit Tracker: Diiwaangelinta saacadda saxda ah ee macallinku
+    xaadiriyay iyo in ay ku jirtay saacadaha shaqada (08:00-12:00 / 14:00-16:30) ama ka baxsanayd.
+  - Warqadda Digniinta Habsanka (Student Late Warning Slip) oo PDF loo daabici karo.
+
+E. IMTIXAANNADA & 7-DA MAADDO EE RASMIGA AH (EXAMS & MARKS)
+  - 7-da Maaddo ee heerka dugsiyada:
+      1. Diinta Islaamka
+      2. Af-Soomaali
+      3. Xisaab
+      4. Saynis
+      5. Cilmiga Bulshada
+      6. English
+      7. Carabi
+  - Xisaabinta Buundooyinka: Teeramka 1aad (Max: 50) + Teeramka 2aad (Max: 50) = Wadarta (/100).
+  - Xisaabinta tooska ah ee Celceliska, Darajada (A, B, C, D, F) iyo Xaaladda (Baasay / Dhacay).
+  - Mark Change Audit Trail: Diiwaanka qofkii buundo beddelay, tii hore, tii cusub, iyo sababta.
+
+F. MAAMULKA LACAGAHA (FEE MANAGEMENT)
+  - Lacagaha lagu qaabilo: USD iyo SLS (Somali Shilling).
+  - Dabagalka lacagaha dhiman (Pending Fees) iyo lacagaha la bixiyay (Paid Fees).
+  - Rasiidho la daabacan karo iyo dhoofinta xogta ee Excel/CSV.
+
+G. BARTA ARDAYDA & WAALIDIINTA (PUBLIC STUDENT PORTAL)
+  - Shaashad u gaar ah ardayda iyo waalidiinta iyagoon u baahnayn login shaqaale.
+  - Gelinta Student ID-ga oo kaliya si loo helo Report Card dhammaystiran,
+    xaadirinta boqolkiiba, iyo buundooyinka maaddo kasta.
+
+
+4. WARQADAHA & DAABACAADDA RASMIGA AH (OFFICIAL PDF PRINTING ENGINE)
+--------------------------------------------------------------------------------
+App-ku wuxuu si buuxda u daabacaa una dhoofiyaa PDF-yo rasmi ah oo qaab A4 ah:
+  1. Warqadda Ardayga (Official Clearance & Leaving Record Sheet):
+     - Dugsiga hore, dugsiga cusub, fasalka uu u gudbayo, iyo saxeexyada kormeeraha & maamulaha.
+  2. Marksheet-ka Ardayga (Annual Marksheet & Results Card):
+     - Qof keliya (Single PDF) ama Dhammaan Fasalka oo Dhan hal mar (All Class PDF)
+       oo bogag kala madax-bannaan leh (page-break: always).
+  3. Warbixinta Guud ee Dugsiga (Comprehensive School Overview Report):
+     - Tirakoobka ardayda, Garaafka Wiilasha & Gabdhaha (Gender Percentage Bar Chart),
+       Tirada Macallimiinta (Gelin Hore & Danbe), Agabka Dugsiga, iyo shaxda fasal-kasta.
+  4. Warbixinta Xaadirinta & Saacadaha Macallimiinta (Monthly Attendance & Audit Sheet).
+  5. Xaashida Natiijooyinka Imtixaanka Fasalka (Class Exam Results Roster).
+
+
+5. NAQSHADDA & MIDABADA (UI/UX DESIGN SYSTEM)
+--------------------------------------------------------------------------------
+- Design Language: Material Design 3 (M3).
+- Midabada Astaanta u ah (Color Scheme):
+  * Teal Primary: #006A6B (Midabka koowaad ee dugsiga)
+  * Teal Dark: #004D4E (Ciwaannada waaweyn)
+  * Pass Green: #15803D (Baasay / Xaadir)
+  * Fail Red: #C62828 (Dhacay / Maqan / Tirtirid)
+  * Warning Amber: #B45309 (Habsan / Lacag dhiman)
+  * Male Stat Blue: #0284C7
+  * Female Stat Pink: #D946EF
+- UX & Accessibility:
+  * Minimum Touch Target: 48dp x 48dp dhammaan badhannada.
+  * LazyColumn Keys: Liisasku dib iskuma sawiraan xilliga rogidda (60fps fluid scroll).
+  * Edge-to-Edge display oo taageeraya dhammaan dhererrada taleefannada.
+
+
+6. AMNIGA, FASAXYADA & BADBAADADA XOGTA (SECURITY & POLICY)
+--------------------------------------------------------------------------------
+- Fasaxyada: Kaliya INTERNET iyo ACCESS_NETWORK_STATE ayaa loo baahan yahay.
+  App-ku ma weydiisto isticmaalaha wax fasaxyo halis ah (No dangerous permissions).
+- Dhoofinta Faylasha: Waxaa loo isticmaalaa Android FileProvider oo 100% waafaqsan
+  xeerarka Google Play Developer Program.
+- Badbaado 100%: Xogta dugsigu waxay leedahay keyd saddex-geesood ah:
+  Room SQLite (Local) + Recycle Bin (Recovery) + Google Drive Cloud Sync.
+================================================================================

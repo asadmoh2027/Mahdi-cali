@@ -2554,30 +2554,32 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
             val html = StringBuilder()
             html.append("<html><head><style>")
-            html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #1E293B; background: #FFF; line-height: 1.5; }")
+            html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
+            html.append("@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } }")
+            html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 0; margin: 0; color: #1E293B; background: #FFF; line-height: 1.15; font-size: 8.5px; }")
+            html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
             html.append(artisticHeaderCss)
-            html.append(".section-title { font-size: 13px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 4px solid #006A6B; padding-left: 8px; margin: 18px 0 8px 0; }")
-            html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px; }")
-            html.append(".info-item { margin-bottom: 4px; }")
-            html.append(".badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }")
+            html.append(".section-title { font-size: 9.5px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 3px solid #006A6B; padding-left: 6px; margin: 5px 0 2px 0; }")
+            html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 4px 6px; font-size: 8.5px; margin-bottom: 4px; }")
+            html.append(".info-item { margin-bottom: 2px; }")
+            html.append(".badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 8px; font-weight: bold; }")
             html.append(".badge-free { background: #FEF3C7; color: #B45309; border: 1px solid #F59E0B; }")
             html.append(".badge-pass { background: #DCFCE7; color: #15803D; }")
             html.append(".badge-fail { background: #FEE2E2; color: #B91C1C; }")
             html.append(".badge-paid { background: #DCFCE7; color: #15803D; }")
             html.append(".badge-due { background: #FEE2E2; color: #B91C1C; }")
-            html.append("table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }")
-            html.append("th { background: #006A6B; color: #FFFFFF; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: bold; }")
-            html.append("td { border-bottom: 1px solid #E2E8F0; padding: 8px 10px; font-size: 11px; color: #334155; }")
+            html.append("table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 8.5px; }")
+            html.append("th { background: #006A6B; color: #FFFFFF; padding: 3px 5px; text-align: left; font-size: 8.5px; font-weight: bold; }")
+            html.append("td { border-bottom: 1px solid #E2E8F0; padding: 2.5px 5px; font-size: 8.5px; color: #334155; }")
             html.append("tr:nth-child(even) { background-color: #F8FAFC; }")
-            html.append(".kpi-row { display: flex; gap: 10px; margin: 10px 0; }")
-            html.append(".kpi-card { flex: 1; background: #F1F5F9; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #CBD5E1; }")
-            html.append(".kpi-val { font-size: 16px; font-weight: 800; color: #006A6B; margin-top: 2px; }")
-            html.append(".kpi-lbl { font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; }")
-            html.append(".signatures { display: flex; justify-content: space-between; margin-top: 36px; padding-top: 16px; page-break-inside: avoid; }")
-            html.append(".sig-box { text-align: center; width: 40%; }")
-            html.append(".sig-line { border-top: 1px dashed #64748B; margin-top: 40px; padding-top: 4px; font-size: 11px; font-weight: bold; color: #475569; }")
-            html.append("@media print { body { padding: 10px; } }")
-            html.append("</style></head><body>")
+            html.append(".kpi-row { display: flex; gap: 4px; margin: 4px 0; }")
+            html.append(".kpi-card { flex: 1; background: #F1F5F9; border-radius: 4px; padding: 4px; text-align: center; border: 1px solid #CBD5E1; }")
+            html.append(".kpi-val { font-size: 11px; font-weight: 800; color: #006A6B; margin-top: 1px; }")
+            html.append(".kpi-lbl { font-size: 7.5px; font-weight: 700; color: #64748B; text-transform: uppercase; }")
+            html.append(".signatures { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 6px; page-break-inside: avoid; }")
+            html.append(".sig-box { text-align: center; width: 45%; }")
+            html.append(".sig-line { border-top: 1px dashed #64748B; margin-top: 14px; padding-top: 2px; font-size: 8.5px; font-weight: bold; color: #475569; }")
+            html.append("</style></head><body><div class='document-container'>")
 
             // Top Header with Artistic Logo
             html.append(getArtisticHeaderHtml(
@@ -2695,7 +2697,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
             html.append("<div class='sig-box'><div class='sig-line'>Maamulaha Dugsiga (Principal Stamp & Sign)</div></div>")
             html.append("</div>")
 
-            html.append("</body></html>")
+            html.append("</div></body></html>")
 
             repository.printHtmlReport(context, html.toString(), "Student_Report_${student.studentId}")
         }
@@ -3257,42 +3259,43 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4; margin: 12mm; }")
-        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 5px; color: #102A2A; font-size: 12px; }")
-        html.append(".document-container { border: 2px solid #006A6B; padding: 15px; border-radius: 6px; box-sizing: border-box; }")
+        html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
+        html.append("@media print { html, body { margin: 0; padding: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #102A2A; font-size: 8.5px; line-height: 1.15; }")
+        html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
 
         // Header
-        html.append(".header-box { text-align: center; border: 1.5px solid #006A6B; padding: 10px; border-radius: 4px; background: #FAFDFD; margin-bottom: 12px; }")
-        html.append(".gov-title { font-size: 10px; font-weight: bold; color: #004D4E; text-transform: uppercase; letter-spacing: 0.5px; }")
-        html.append(".school-title { font-size: 18px; font-weight: 800; color: #006A6B; margin: 4px 0 6px 0; text-transform: uppercase; }")
-        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 15px; font-weight: bold; padding: 5px 22px; display: inline-block; border-radius: 4px; letter-spacing: 1px; }")
+        html.append(".header-box { text-align: center; border: 1px solid #006A6B; padding: 3px 6px; border-radius: 4px; background: #FAFDFD; margin-bottom: 3px; }")
+        html.append(".gov-title { font-size: 8.5px; font-weight: bold; color: #004D4E; text-transform: uppercase; letter-spacing: 0.5px; }")
+        html.append(".school-title { font-size: 13px; font-weight: 800; color: #006A6B; margin: 1px 0 2px 0; text-transform: uppercase; }")
+        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 9.5px; font-weight: bold; padding: 1.5px 12px; display: inline-block; border-radius: 3px; letter-spacing: 0.5px; }")
 
         // Section Title
-        html.append(".sec-title { font-size: 12px; font-weight: bold; color: #006A6B; margin: 12px 0 6px 0; text-transform: uppercase; border-bottom: 2px solid #006A6B; padding-bottom: 3px; }")
+        html.append(".sec-title { font-size: 8.5px; font-weight: bold; color: #006A6B; margin: 3px 0 1px 0; text-transform: uppercase; border-bottom: 1.5px solid #006A6B; padding-bottom: 1px; }")
 
         // Profile Table
-        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1px solid #CBD5E1; }")
-        html.append(".info-table td { padding: 6px 10px; border: 1px solid #E2E8F0; font-size: 11px; }")
-        html.append(".info-label { font-weight: bold; color: #475569; width: 40%; background: #F8FAFC; }")
-        html.append(".info-value { font-weight: bold; color: #0F172A; }")
+        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; border: 1px solid #CBD5E1; }")
+        html.append(".info-table td { padding: 1.5px 5px; border: 1px solid #E2E8F0; font-size: 8.5px; }")
+        html.append(".info-label { font-weight: bold; color: #475569; width: 22%; background: #F8FAFC; }")
+        html.append(".info-value { font-weight: bold; color: #0F172A; width: 28%; }")
 
         // Marks Table
-        html.append(".marks-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1.5px solid #006A6B; font-size: 11px; }")
-        html.append(".marks-table th { background: #006A6B; color: white; padding: 7px; text-align: center; font-weight: bold; }")
-        html.append(".marks-table td { border: 1px solid #CBD5E1; padding: 6px; text-align: center; }")
+        html.append(".marks-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; border: 1.5px solid #006A6B; font-size: 8.5px; }")
+        html.append(".marks-table th { background: #006A6B; color: white; padding: 2.5px 3px; text-align: center; font-weight: bold; font-size: 8.5px; }")
+        html.append(".marks-table td { border: 1px solid #CBD5E1; padding: 1.5px 3px; text-align: center; font-size: 8.5px; }")
         html.append(".marks-table td.sub-name { text-align: left; font-weight: bold; color: #1E293B; }")
-        html.append(".marks-table tr.summary-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 1.5px solid #006A6B; }")
+        html.append(".marks-table tr.summary-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 1.5px solid #006A6B; padding: 1.5px 3px; }")
 
         // Result Boxes
-        html.append(".result-box-pass { background: #E8F5E9; border: 1.5px solid #2E7D32; border-radius: 6px; padding: 12px; margin-bottom: 12px; color: #1B5E20; }")
-        html.append(".result-box-fail { background: #FFEBEE; border: 1.5px solid #C62828; border-radius: 6px; padding: 12px; margin-bottom: 12px; color: #B71C1C; }")
-        html.append(".result-head { font-size: 14px; font-weight: bold; margin-bottom: 4px; }")
-        html.append(".result-body { font-size: 11px; line-height: 1.5; }")
+        html.append(".result-box-pass { background: #E8F5E9; border: 1px solid #2E7D32; border-radius: 3px; padding: 2px 6px; margin-bottom: 2px; color: #1B5E20; line-height: 1.15; }")
+        html.append(".result-box-fail { background: #FFEBEE; border: 1px solid #C62828; border-radius: 3px; padding: 2px 6px; margin-bottom: 2px; color: #B71C1C; line-height: 1.15; }")
+        html.append(".result-head { font-size: 9.5px; font-weight: bold; margin-bottom: 1px; }")
+        html.append(".result-body { font-size: 8px; line-height: 1.15; }")
 
         // Footer
-        html.append(".footer-section { margin-top: 20px; border: 1px solid #CBD5E1; border-radius: 4px; padding: 12px; background: #FAFDFD; page-break-inside: avoid; }")
-        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 11px; font-weight: bold; }")
-        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 10px; color: #64748B; }")
+        html.append(".footer-section { margin-top: 2px; border: 1px solid #CBD5E1; border-radius: 3px; padding: 2.5px 6px; background: #FAFDFD; page-break-inside: avoid; }")
+        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 8.5px; font-weight: bold; }")
+        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 7.5px; color: #64748B; }")
 
         html.append("</style></head><body>")
 
@@ -3300,45 +3303,40 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         // Header
         val logoBase64 = getSchoolLogoBase64(context)
-        html.append("<div class='header-box' style='padding:10px 14px; margin-bottom:12px;'>")
-        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
-        html.append("<div style='flex:1; text-align:left; font-size:10px; line-height:1.3;'>")
-        html.append("<div style='font-weight:bold; color:#004D4E; font-size:10.5px;'>JAMHUURIYADDA SOMALILAND</div>")
-        html.append("<div style='font-weight:bold; color:#475569; font-size:9.5px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
-        html.append("<div style='color:#64748B; font-size:9px;'>Imtixaanka Sanad-Dugsiyeedka</div>")
+        html.append("<div class='header-box'>")
+        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:8px;'>")
+        html.append("<div style='flex:1; text-align:left; font-size:8.5px; line-height:1.15;'>")
+        html.append("<div style='font-weight:bold; color:#004D4E; font-size:9px;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-weight:bold; color:#475569; font-size:8px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='color:#64748B; font-size:7.5px;'>Imtixaanka Sanad-Dugsiyeedka</div>")
         html.append("</div>")
 
         html.append("<div style='flex-shrink:0; text-align:center;'>")
         if (logoBase64.isNotBlank()) {
-            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.2);' alt='Logo' />")
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:36px; height:36px; border-radius:50%; object-fit:cover; border:1.5px solid #006A6B; background:#FFF;' alt='Logo' />")
         }
         html.append("</div>")
 
-        html.append("<div style='flex:1; text-align:right; font-size:10px; line-height:1.3;'>")
+        html.append("<div style='flex:1; text-align:right; font-size:8.5px; line-height:1.15;'>")
         html.append("<div style='color:#334155;'><b>Tixraac:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCodeMSK</span></div>")
         html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTimeMSK</div>")
-        html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:2px 8px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:2px;'>OFFICIAL MARKSHEET</div>")
+        html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:1px 6px; border-radius:3px; font-size:8px; font-weight:bold; margin-top:2px;'>OFFICIAL MARKSHEET</div>")
         html.append("</div>")
         html.append("</div>")
 
-        html.append("<div style='text-align:center; margin-top:6px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
-        html.append("<div class='school-title' style='margin:0 0 3px 0; font-size:18px;'>${schoolHeader.uppercase()}</div>")
-        html.append("<div class='doc-banner' style='font-size:13px; padding:3px 18px;'>STUDENT MARKSHEET (WARBIXINTA DHIBCAHA)</div>")
+        html.append("<div style='text-align:center; margin-top:3px; padding-top:3px; border-top:1px dashed #CBD5E1;'>")
+        html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
+        html.append("<div class='doc-banner'>STUDENT MARKSHEET (WARBIXINTA DHIBCAHA)</div>")
         html.append("</div>")
         html.append("</div>")
 
-        // 1. STUDENT PROFILE
+        // 1. STUDENT PROFILE (Compact 4-column 2-pair layout)
         html.append("<div class='sec-title'>1. STUDENT PROFILE (XOGTA ARDAYGA)</div>")
         html.append("<table class='info-table'>")
-        html.append("<tr><td class='info-label'>Magaca Ardayga oo Dhamaystiran:</td><td class='info-value'>${student.name}</td></tr>")
-        html.append("<tr><td class='info-label'>Magaca Hooyada:</td><td class='info-value'>${student.motherName.ifBlank { "N/A" }}</td></tr>")
-        html.append("<tr><td class='info-label'>Student ID / Roll Number:</td><td class='info-value'>${student.studentId}</td></tr>")
-        html.append("<tr><td class='info-label'>Gender:</td><td class='info-value'>${student.gender}</td></tr>")
-        html.append("<tr><td class='info-label'>Mobilka Waalidka:</td><td class='info-value'>${student.phone.ifBlank { "N/A" }}</td></tr>")
-        html.append("<tr><td class='info-label'>Fasalka:</td><td class='info-value'>$currentClassName</td></tr>")
-        html.append("<tr><td class='info-label'>Sanad-Dugsiyeedka:</td><td class='info-value'>$academicYear</td></tr>")
-        html.append("<tr><td class='info-label'>Magaca Dugsiga:</td><td class='info-value'>$schoolHeader</td></tr>")
-        html.append("<tr><td class='info-label'>Fasalka uu u Gudbayo:</td><td class='info-value'>$destinationClass</td></tr>")
+        html.append("<tr><td class='info-label'>Magaca Ardayga:</td><td class='info-value'>${student.name}</td><td class='info-label'>Student ID / Roll:</td><td class='info-value'>${student.studentId}</td></tr>")
+        html.append("<tr><td class='info-label'>Magaca Hooyada:</td><td class='info-value'>${student.motherName.ifBlank { "N/A" }}</td><td class='info-label'>Mobilka Waalidka:</td><td class='info-value'>${student.phone.ifBlank { "N/A" }}</td></tr>")
+        html.append("<tr><td class='info-label'>Fasalka Hadda:</td><td class='info-value'>$currentClassName</td><td class='info-label'>Jinsiga (Gender):</td><td class='info-value'>${student.gender}</td></tr>")
+        html.append("<tr><td class='info-label'>Sanad-Dugsiyeedka:</td><td class='info-value'>$academicYear</td><td class='info-label'>Fasalka uu u Gudbayo:</td><td class='info-value'>$destinationClass</td></tr>")
         html.append("</table>")
 
         // 2. IMTIXAANKA SANAD DUGSIYEEDKA
@@ -3454,30 +3452,30 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4; margin: 12mm; }")
-        html.append("@media print { .page-break { page-break-after: always; break-after: page; } }")
-        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 5px; color: #102A2A; font-size: 12px; }")
-        html.append(".document-container { border: 2px solid #006A6B; padding: 15px; border-radius: 6px; box-sizing: border-box; }")
-        html.append(".header-box { text-align: center; border: 1.5px solid #006A6B; padding: 10px; border-radius: 4px; background: #FAFDFD; margin-bottom: 12px; }")
-        html.append(".school-title { font-size: 18px; font-weight: 800; color: #006A6B; margin: 4px 0 6px 0; text-transform: uppercase; }")
-        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 15px; font-weight: bold; padding: 5px 22px; display: inline-block; border-radius: 4px; letter-spacing: 1px; }")
-        html.append(".sec-title { font-size: 12px; font-weight: bold; color: #006A6B; margin: 12px 0 6px 0; text-transform: uppercase; border-bottom: 2px solid #006A6B; padding-bottom: 3px; }")
-        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1px solid #CBD5E1; }")
-        html.append(".info-table td { padding: 6px 10px; border: 1px solid #E2E8F0; font-size: 11px; }")
-        html.append(".info-label { font-weight: bold; color: #475569; width: 40%; background: #F8FAFC; }")
-        html.append(".info-value { font-weight: bold; color: #0F172A; }")
-        html.append(".marks-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1.5px solid #006A6B; font-size: 11px; }")
-        html.append(".marks-table th { background: #006A6B; color: white; padding: 7px; text-align: center; font-weight: bold; }")
-        html.append(".marks-table td { border: 1px solid #CBD5E1; padding: 6px; text-align: center; }")
+        html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
+        html.append("@media print { html, body { margin: 0; padding: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } .page-break { page-break-after: always; break-after: page; } }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #102A2A; font-size: 8.5px; line-height: 1.15; }")
+        html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
+        html.append(".header-box { text-align: center; border: 1px solid #006A6B; padding: 3px 6px; border-radius: 4px; background: #FAFDFD; margin-bottom: 3px; }")
+        html.append(".school-title { font-size: 13px; font-weight: 800; color: #006A6B; margin: 1px 0 2px 0; text-transform: uppercase; }")
+        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 9.5px; font-weight: bold; padding: 1.5px 12px; display: inline-block; border-radius: 3px; letter-spacing: 0.5px; }")
+        html.append(".sec-title { font-size: 8.5px; font-weight: bold; color: #006A6B; margin: 3px 0 1px 0; text-transform: uppercase; border-bottom: 1.5px solid #006A6B; padding-bottom: 1px; }")
+        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; border: 1px solid #CBD5E1; }")
+        html.append(".info-table td { padding: 1.5px 5px; border: 1px solid #E2E8F0; font-size: 8.5px; }")
+        html.append(".info-label { font-weight: bold; color: #475569; width: 22%; background: #F8FAFC; }")
+        html.append(".info-value { font-weight: bold; color: #0F172A; width: 28%; }")
+        html.append(".marks-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; border: 1.5px solid #006A6B; font-size: 8.5px; }")
+        html.append(".marks-table th { background: #006A6B; color: white; padding: 2.5px 3px; text-align: center; font-weight: bold; font-size: 8.5px; }")
+        html.append(".marks-table td { border: 1px solid #CBD5E1; padding: 1.5px 3px; text-align: center; font-size: 8.5px; }")
         html.append(".marks-table td.sub-name { text-align: left; font-weight: bold; color: #1E293B; }")
-        html.append(".marks-table tr.summary-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 1.5px solid #006A6B; }")
-        html.append(".result-box-pass { background: #E8F5E9; border: 1.5px solid #2E7D32; border-radius: 6px; padding: 12px; margin-bottom: 12px; color: #1B5E20; }")
-        html.append(".result-box-fail { background: #FFEBEE; border: 1.5px solid #C62828; border-radius: 6px; padding: 12px; margin-bottom: 12px; color: #B71C1C; }")
-        html.append(".result-head { font-size: 14px; font-weight: bold; margin-bottom: 4px; }")
-        html.append(".result-body { font-size: 11px; line-height: 1.5; }")
-        html.append(".footer-section { margin-top: 20px; border: 1px solid #CBD5E1; border-radius: 4px; padding: 12px; background: #FAFDFD; page-break-inside: avoid; }")
-        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 11px; font-weight: bold; }")
-        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 10px; color: #64748B; }")
+        html.append(".marks-table tr.summary-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 1.5px solid #006A6B; padding: 1.5px 3px; font-size: 8.5px; }")
+        html.append(".result-box-pass { background: #E8F5E9; border: 1px solid #2E7D32; border-radius: 3px; padding: 2px 6px; margin-bottom: 2px; color: #1B5E20; line-height: 1.15; }")
+        html.append(".result-box-fail { background: #FFEBEE; border: 1px solid #C62828; border-radius: 3px; padding: 2px 6px; margin-bottom: 2px; color: #B71C1C; line-height: 1.15; }")
+        html.append(".result-head { font-size: 9.5px; font-weight: bold; margin-bottom: 1px; }")
+        html.append(".result-body { font-size: 8px; line-height: 1.15; }")
+        html.append(".footer-section { margin-top: 2px; border: 1px solid #CBD5E1; border-radius: 3px; padding: 2.5px 6px; background: #FAFDFD; page-break-inside: avoid; }")
+        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 8.5px; font-weight: bold; }")
+        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 7.5px; color: #64748B; }")
         html.append("</style></head><body>")
 
         val activeSubjects = listOf("Diinta Islaamka", "Af-Soomaali", "Xisaab", "Saynis", "Cilmiga Bulshada", "English", "Carabi")
@@ -3492,44 +3490,39 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
             val serialCodeMSK = generateSerialCode("MSK")
 
             html.append("<div class='document-container'>")
-            html.append("<div class='header-box' style='padding:10px 14px; margin-bottom:12px;'>")
-            html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'>")
-            html.append("<div style='flex:1; text-align:left; font-size:10px; line-height:1.3;'>")
-            html.append("<div style='font-weight:bold; color:#004D4E; font-size:10.5px;'>JAMHUURIYADDA SOMALILAND</div>")
-            html.append("<div style='font-weight:bold; color:#475569; font-size:9.5px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
-            html.append("<div style='color:#64748B; font-size:9px;'>Imtixaanka Sanad-Dugsiyeedka</div>")
+            html.append("<div class='header-box'>")
+            html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:8px;'>")
+            html.append("<div style='flex:1; text-align:left; font-size:8.5px; line-height:1.15;'>")
+            html.append("<div style='font-weight:bold; color:#004D4E; font-size:9px;'>JAMHUURIYADDA SOMALILAND</div>")
+            html.append("<div style='font-weight:bold; color:#475569; font-size:8px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+            html.append("<div style='color:#64748B; font-size:7.5px;'>Imtixaanka Sanad-Dugsiyeedka</div>")
             html.append("</div>")
 
             html.append("<div style='flex-shrink:0; text-align:center;'>")
             if (logoBase64.isNotBlank()) {
-                html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:70px; height:70px; border-radius:50%; object-fit:cover; border:2.5px solid #006A6B; background:#FFF; box-shadow:0 3px 8px rgba(0,106,107,0.2);' alt='Logo' />")
+                html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:36px; height:36px; border-radius:50%; object-fit:cover; border:1.5px solid #006A6B; background:#FFF;' alt='Logo' />")
             }
             html.append("</div>")
 
-            html.append("<div style='flex:1; text-align:right; font-size:10px; line-height:1.3;'>")
+            html.append("<div style='flex:1; text-align:right; font-size:8.5px; line-height:1.15;'>")
             html.append("<div style='color:#334155;'><b>Tixraac:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCodeMSK</span></div>")
             html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTimeMSK</div>")
-            html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:2px 8px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:2px;'>OFFICIAL MARKSHEET</div>")
+            html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:1px 6px; border-radius:3px; font-size:8px; font-weight:bold; margin-top:2px;'>OFFICIAL MARKSHEET</div>")
             html.append("</div>")
             html.append("</div>")
 
-            html.append("<div style='text-align:center; margin-top:6px; padding-top:6px; border-top:1px dashed #CBD5E1;'>")
-            html.append("<div class='school-title' style='margin:0 0 3px 0; font-size:18px;'>${schoolHeader.uppercase()}</div>")
-            html.append("<div class='doc-banner' style='font-size:13px; padding:3px 18px;'>STUDENT MARKSHEET (WARBIXINTA DHIBCAHA)</div>")
+            html.append("<div style='text-align:center; margin-top:2px; padding-top:2px; border-top:1px dashed #CBD5E1;'>")
+            html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
+            html.append("<div class='doc-banner'>STUDENT MARKSHEET (WARBIXINTA DHIBCAHA)</div>")
             html.append("</div>")
             html.append("</div>")
 
             html.append("<div class='sec-title'>1. STUDENT PROFILE (XOGTA ARDAYGA)</div>")
             html.append("<table class='info-table'>")
-            html.append("<tr><td class='info-label'>Magaca Ardayga oo Dhamaystiran:</td><td class='info-value'>${student.name}</td></tr>")
-            html.append("<tr><td class='info-label'>Magaca Hooyada:</td><td class='info-value'>${student.motherName.ifBlank { "N/A" }}</td></tr>")
-            html.append("<tr><td class='info-label'>Student ID / Roll Number:</td><td class='info-value'>${student.studentId}</td></tr>")
-            html.append("<tr><td class='info-label'>Gender:</td><td class='info-value'>${student.gender}</td></tr>")
-            html.append("<tr><td class='info-label'>Mobilka Waalidka:</td><td class='info-value'>${student.phone.ifBlank { "N/A" }}</td></tr>")
-            html.append("<tr><td class='info-label'>Fasalka:</td><td class='info-value'>$currentClassName</td></tr>")
-            html.append("<tr><td class='info-label'>Sanad-Dugsiyeedka:</td><td class='info-value'>$academicYear</td></tr>")
-            html.append("<tr><td class='info-label'>Magaca Dugsiga:</td><td class='info-value'>$schoolHeader</td></tr>")
-            html.append("<tr><td class='info-label'>Fasalka uu u Gudbayo:</td><td class='info-value'>$destinationClass</td></tr>")
+            html.append("<tr><td class='info-label'>Magaca Ardayga:</td><td class='info-value'>${student.name}</td><td class='info-label'>Student ID / Roll:</td><td class='info-value'>${student.studentId}</td></tr>")
+            html.append("<tr><td class='info-label'>Magaca Hooyada:</td><td class='info-value'>${student.motherName.ifBlank { "N/A" }}</td><td class='info-label'>Mobilka Waalidka:</td><td class='info-value'>${student.phone.ifBlank { "N/A" }}</td></tr>")
+            html.append("<tr><td class='info-label'>Fasalka Hadda:</td><td class='info-value'>$currentClassName</td><td class='info-label'>Jinsiga (Gender):</td><td class='info-value'>${student.gender}</td></tr>")
+            html.append("<tr><td class='info-label'>Sanad-Dugsiyeedka:</td><td class='info-value'>$academicYear</td><td class='info-label'>Fasalka uu u Gudbayo:</td><td class='info-value'>$destinationClass</td></tr>")
             html.append("</table>")
 
             html.append("<div class='sec-title'>2. IMTIXAANKA SANAD DUGSIYEEDKA (Mark Max: 50 | Pass: 25 per Term)</div>")
@@ -3960,7 +3953,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         repository.printHtmlReport(context, html.toString(), "All_Student_Reports_$clsName")
     }
 
-    private fun isTimeOutsideWorkingHours(timeStr: String): Boolean {
+    fun isTimeOutsideWorkingHours(timeStr: String): Boolean {
         if (timeStr.isBlank()) return false
         try {
             val clean = timeStr.trim().lowercase()
@@ -4088,6 +4081,187 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("</body></html>")
 
         repository.printHtmlReport(context, html.toString(), "Attendance_Report_${yearMonth ?: "All"}")
+    }
+
+    fun printStudentAttendanceReportHtml(
+        context: Context,
+        student: Student,
+        mode: String = "MONTH", // "MONTH" or "TERM"
+        selectedMonth: String? = null
+    ) {
+        val currentCls = classes.value.find { it.id == student.classId }
+        val currentClassName = currentCls?.name ?: "N/A"
+        val schoolHeader = schoolName.value.ifBlank { "Mahdi Cali School" }
+        val serialCode = generateSerialCode("ATT")
+        val nowDateTime = getCurrentDateTimeStr()
+        val logoBase64 = getSchoolLogoBase64(context)
+
+        val targetMonth = if (!selectedMonth.isNullOrBlank()) selectedMonth else java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
+        val allStudentAtt = allAttendance.value.filter { it.studentId == student.id }
+
+        val isMonthly = mode.equals("MONTH", ignoreCase = true)
+        val filteredAtt = if (isMonthly) {
+            allStudentAtt.filter { it.date.startsWith(targetMonth) }.sortedBy { it.date }
+        } else {
+            allStudentAtt.sortedBy { it.date }
+        }
+
+        val totalDays = filteredAtt.size
+        val presentDays = filteredAtt.count { it.status.equals("Present", ignoreCase = true) || it.status == "P" }
+        val absentDays = filteredAtt.count { it.status.equals("Absent", ignoreCase = true) || it.status == "A" }
+        val lateDays = filteredAtt.count { it.status.equals("Late", ignoreCase = true) || it.status.equals("Habsan", ignoreCase = true) || it.status == "H" }
+        val freeDays = filteredAtt.count { it.status.equals("Free", ignoreCase = true) || it.status == "F" }
+        val attendanceRate = if (totalDays > 0) ((presentDays + lateDays + freeDays).toDouble() / totalDays) * 100.0 else 100.0
+
+        val reportTitle = if (isMonthly) {
+            "WARBIXINTA XAADIRINTA ARDAYGA EE BISHA ($targetMonth)"
+        } else {
+            "WARBIXINTA XAADIRINTA ARDAYGA EE TEERAMKA / SANNADKA"
+        }
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
+        html.append("@media print { html, body { margin: 0; padding: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #102A2A; font-size: 8.5px; line-height: 1.15; }")
+        html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
+        html.append(".header-box { text-align: center; border: 1px solid #006A6B; padding: 3px 6px; border-radius: 4px; background: #FAFDFD; margin-bottom: 3px; }")
+        html.append(".school-title { font-size: 13px; font-weight: 800; color: #006A6B; margin: 1px 0 2px 0; text-transform: uppercase; }")
+        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 9.5px; font-weight: bold; padding: 1.5px 12px; display: inline-block; border-radius: 3px; letter-spacing: 0.5px; }")
+        html.append(".sec-title { font-size: 8.5px; font-weight: bold; color: #006A6B; margin: 3px 0 1px 0; text-transform: uppercase; border-bottom: 1.5px solid #006A6B; padding-bottom: 1px; }")
+        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; border: 1px solid #CBD5E1; }")
+        html.append(".info-table td { padding: 1.5px 5px; border: 1px solid #E2E8F0; font-size: 8.5px; }")
+        html.append(".info-label { font-weight: bold; color: #475569; width: 22%; background: #F8FAFC; }")
+        html.append(".info-value { font-weight: bold; color: #0F172A; width: 28%; }")
+        html.append(".kpi-row { display: flex; gap: 4px; margin: 4px 0; }")
+        html.append(".kpi-card { flex: 1; border-radius: 3px; padding: 3px 2px; text-align: center; font-weight: bold; border: 1px solid #CBD5E1; font-size: 8px; }")
+        html.append(".kpi-num { font-size: 12px; margin-top: 1px; font-weight: 800; }")
+        html.append(".att-table { width: 100%; border-collapse: collapse; margin-top: 2px; margin-bottom: 3px; font-size: 8.5px; }")
+        html.append(".att-table th { background: #006A6B; color: white; padding: 2.5px 3px; font-weight: bold; text-align: center; font-size: 8.5px; }")
+        html.append(".att-table td { border: 1px solid #CBD5E1; padding: 1.5px 3px; text-align: center; font-size: 8.5px; }")
+        html.append(".status-p { color: #166534; font-weight: bold; background: #DCFCE7; padding: 1px 4px; border-radius: 2px; }")
+        html.append(".status-a { color: #991B1B; font-weight: bold; background: #FEE2E2; padding: 1px 4px; border-radius: 2px; }")
+        html.append(".status-l { color: #B45309; font-weight: bold; background: #FEF3C7; padding: 1px 4px; border-radius: 2px; }")
+        html.append(".footer-section { margin-top: 2px; border: 1px solid #CBD5E1; border-radius: 3px; padding: 2.5px 6px; background: #FAFDFD; page-break-inside: avoid; }")
+        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 8.5px; font-weight: bold; }")
+        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 7.5px; color: #64748B; }")
+        html.append("</style></head><body>")
+
+        html.append("<div class='document-container'>")
+
+        // Header
+        html.append("<div class='header-box'>")
+        html.append("<div style='display:flex; align-items:center; justify-content:space-between; gap:8px;'>")
+        html.append("<div style='flex:1; text-align:left; font-size:8.5px; line-height:1.15;'>")
+        html.append("<div style='font-weight:bold; color:#004D4E; font-size:9px;'>JAMHUURIYADDA SOMALILAND</div>")
+        html.append("<div style='font-weight:bold; color:#475569; font-size:8px;'>WASAARADDA WAXBARASHADA & SAYNISKA</div>")
+        html.append("<div style='color:#64748B; font-size:7.5px;'>Diiwaanka Xaadirinta Ardayda</div>")
+        html.append("</div>")
+
+        html.append("<div style='flex-shrink:0; text-align:center;'>")
+        if (logoBase64.isNotBlank()) {
+            html.append("<img src='data:image/jpeg;base64,$logoBase64' style='width:36px; height:36px; border-radius:50%; object-fit:cover; border:1.5px solid #006A6B; background:#FFF;' alt='Logo' />")
+        }
+        html.append("</div>")
+
+        html.append("<div style='flex:1; text-align:right; font-size:9px; line-height:1.2;'>")
+        html.append("<div style='color:#334155;'><b>Tixraac:</b> <span style='font-family:monospace; color:#006A6B; font-weight:bold;'>$serialCode</span></div>")
+        html.append("<div style='color:#334155;'><b>Taariikhda:</b> $nowDateTime</div>")
+        html.append("<div style='display:inline-block; background:#006A6B; color:#FFF; padding:1px 6px; border-radius:3px; font-size:8px; font-weight:bold; margin-top:2px;'>OFFICIAL ATTENDANCE</div>")
+        html.append("</div>")
+        html.append("</div>")
+
+        html.append("<div style='text-align:center; margin-top:3px; padding-top:3px; border-top:1px dashed #CBD5E1;'>")
+        html.append("<div class='school-title'>${schoolHeader.uppercase()}</div>")
+        html.append("<div class='doc-banner'>$reportTitle</div>")
+        html.append("</div>")
+        html.append("</div>")
+
+        // 1. Profile Table
+        html.append("<div class='sec-title'>1. XOGTA ARDAYGA (STUDENT PROFILE)</div>")
+        html.append("<table class='info-table'>")
+        html.append("<tr><td class='info-label'>Magaca Ardayga:</td><td class='info-value'>${student.name}</td><td class='info-label'>Student ID:</td><td class='info-value'>${student.studentId}</td></tr>")
+        html.append("<tr><td class='info-label'>Fasalka:</td><td class='info-value'>$currentClassName</td><td class='info-label'>Jinsiga (Gender):</td><td class='info-value'>${student.gender}</td></tr>")
+        html.append("<tr><td class='info-label'>Mobilka Waalidka:</td><td class='info-value'>${student.phone.ifBlank { "N/A" }}</td><td class='info-label'>Xilliga / Bisha:</td><td class='info-value'>${if (isMonthly) targetMonth else "Teeramka / Sanadka"}</td></tr>")
+        html.append("</table>")
+
+        // 2. Summary KPI Cards
+        html.append("<div class='sec-title'>2. TIRAKOOBKA XAADIRINTA (ATTENDANCE SUMMARY)</div>")
+        html.append("<div class='kpi-row'>")
+        html.append("<div class='kpi-card' style='background:#F1F5F9;'><div style='color:#475569;'>Wadarta Maalmaha</div><div class='kpi-num' style='color:#0F172A;'>$totalDays</div></div>")
+        html.append("<div class='kpi-card' style='background:#DCFCE7;'><div style='color:#15803D;'>Joogay (Present)</div><div class='kpi-num' style='color:#166534;'>$presentDays</div></div>")
+        html.append("<div class='kpi-card' style='background:#FEE2E2;'><div style='color:#B91C1C;'>Maqnaa (Absent)</div><div class='kpi-num' style='color:#991B1B;'>$absentDays</div></div>")
+        html.append("<div class='kpi-card' style='background:#FEF3C7;'><div style='color:#B45309;'>Habsan (Late)</div><div class='kpi-num' style='color:#92400E;'>$lateDays</div></div>")
+        html.append("<div class='kpi-card' style='background:#E0F2FE;'><div style='color:#0369A1;'>Boqolkiiba (%)</div><div class='kpi-num' style='color:#0284C7;'>${String.format(java.util.Locale.US, "%.1f%%", attendanceRate)}</div></div>")
+        html.append("</div>")
+
+        // 3. Detailed Breakdown
+        if (isMonthly) {
+            html.append("<div class='sec-title'>3. DIIWAANKA MAALMAHA EE BISHA (DAILY LOG - $targetMonth)</div>")
+            if (filteredAtt.isEmpty()) {
+                html.append("<p style='font-style:italic; color:#64748B; margin:4px 0;'>Wax diiwaan xaadirin ah looma helin ardaygan bishan ($targetMonth).</p>")
+            } else {
+                html.append("<table class='att-table'>")
+                html.append("<thead><tr><th style='width:30px;'>#</th><th style='width:80px;'>Taariikhda</th><th style='width:90px;'>Xaaladda</th><th>Wakhtiga La Xaadiriyay</th><th>Macalinka</th></tr></thead><tbody>")
+                filteredAtt.forEachIndexed { idx, att ->
+                    val statusBadge = when {
+                        att.status.equals("Present", ignoreCase = true) || att.status == "P" -> "<span class='status-p'>✅ JOOGAY</span>"
+                        att.status.equals("Absent", ignoreCase = true) || att.status == "A" -> "<span class='status-a'>❌ MAQNAA</span>"
+                        att.status.equals("Late", ignoreCase = true) || att.status.equals("Habsan", ignoreCase = true) || att.status == "H" -> "<span class='status-l'>⏰ HABSAN</span>"
+                        else -> "<span class='status-p'>🌟 BILAASH</span>"
+                    }
+                    val timeStr = att.recordedAt.ifBlank { "-" }
+                    val teacher = att.recordedBy.ifBlank { "Macalin" }
+                    html.append("<tr><td>${idx + 1}</td><td><b>${att.date}</b></td><td>$statusBadge</td><td>$timeStr</td><td>$teacher</td></tr>")
+                }
+                html.append("</tbody></table>")
+            }
+        } else {
+            // Term Breakdown by Month
+            html.append("<div class='sec-title'>3. KALA-JABINTA BILALAHA EE TEERAMKA (MONTHLY TERM BREAKDOWN)</div>")
+            val distinctMonths = allStudentAtt.map { it.date.take(7) }.filter { it.length == 7 }.distinct().sorted()
+            if (distinctMonths.isEmpty()) {
+                html.append("<p style='font-style:italic; color:#64748B; margin:4px 0;'>Wax diiwaan xaadirin ah looma helin ardaygan xilligan.</p>")
+            } else {
+                html.append("<table class='att-table'>")
+                html.append("<thead><tr><th style='width:30px;'>#</th><th>Bisha (Month)</th><th style='width:80px;'>Wadarta</th><th style='width:80px;'>Joogay</th><th style='width:80px;'>Maqnaa</th><th style='width:80px;'>Habsan</th><th style='width:80px;'>Boqolkiiba (%)</th></tr></thead><tbody>")
+                distinctMonths.forEachIndexed { idx, mKey ->
+                    val mAtt = allStudentAtt.filter { it.date.startsWith(mKey) }
+                    val mTot = mAtt.size
+                    val mPres = mAtt.count { it.status.equals("Present", ignoreCase = true) || it.status == "P" }
+                    val mAbs = mAtt.count { it.status.equals("Absent", ignoreCase = true) || it.status == "A" }
+                    val mLate = mAtt.count { it.status.equals("Late", ignoreCase = true) || it.status.equals("Habsan", ignoreCase = true) || it.status == "H" }
+                    val mFree = mAtt.count { it.status.equals("Free", ignoreCase = true) || it.status == "F" }
+                    val mPct = if (mTot > 0) ((mPres + mLate + mFree).toDouble() / mTot) * 100.0 else 100.0
+                    html.append("<tr><td>${idx + 1}</td><td><b>Bisha $mKey</b></td><td>$mTot</td><td><span style='color:#166534; font-weight:bold;'>$mPres</span></td><td><span style='color:#991B1B; font-weight:bold;'>$mAbs</span></td><td><span style='color:#B45309; font-weight:bold;'>$mLate</span></td><td><b>${String.format(java.util.Locale.US, "%.1f%%", mPct)}</b></td></tr>")
+                }
+                html.append("</tbody></table>")
+            }
+        }
+
+        // 4. Evaluation / Remarks
+        val evalText = if (attendanceRate >= 85.0) {
+            "✅ <b>Xaalad Wanaagsan:</b> Ardaygu wuxuu muujiyay dabeecad iyo joogitaan aad u wanaagsan. Wuxuu u qalmaa dhiirigelin joogto ah."
+        } else {
+            "⚠️ <b>Digniin Xaadirineed:</b> Joogitaanka ardaygu wuxuu ka hooseeyaa 85%. Waxaa waalidka laga codsanayaa inuu xafiiska maamulka la soo xidhiidho si arintan looga wada hadlo."
+        }
+        html.append("<div style='background:#F8FAFC; border:1px solid #CBD5E1; border-radius:4px; padding:4px 8px; margin-top:4px; font-size:9px; line-height:1.3;'>$evalText</div>")
+
+        // 5. Footer Signatures & Stamp
+        html.append("<div class='footer-section'>")
+        html.append("<div class='sig-row'>")
+        html.append("<div>Macalinka Fasalka: ______________________</div>")
+        html.append("<div>Maamulaha Dugsiga: ______________________</div>")
+        html.append("</div>")
+        html.append("<div class='stamp-row'>")
+        html.append("<div>Taariikhda & Waqtiga: $nowDateTime</div>")
+        html.append("<div>Serial Code: $serialCode</div>")
+        html.append("</div></div>")
+
+        html.append("</div></body></html>")
+
+        val fileTag = if (isMonthly) "Attendance_${student.studentId}_$targetMonth" else "Attendance_${student.studentId}_Term"
+        repository.printHtmlReport(context, html.toString(), fileTag)
     }
 
     fun printExamReportHtml(context: Context, selectedClassId: Long) {

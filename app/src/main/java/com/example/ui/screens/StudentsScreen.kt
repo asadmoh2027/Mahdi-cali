@@ -61,6 +61,8 @@ fun StudentsScreen(
     onDeleteAllClassStudentsClick: (Long) -> Unit = {},
     onToggleFreeClick: (Long, Boolean) -> Unit = { _, _ -> },
     onPrintStudentReport: (Student) -> Unit = {},
+    onPrintStudentMonthlyAttendance: (Student, String) -> Unit = { _, _ -> },
+    onPrintStudentTermAttendance: (Student) -> Unit = {},
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -339,7 +341,7 @@ fun StudentsScreen(
                             Text(
                                 text = "Waxaad halmar wada tirtiri kartaa dhamaan ardayda ${filteredStudents.size} ee fasalkan.",
                                 fontSize = 10.sp,
-                                color = DarkText
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Button(
@@ -411,7 +413,7 @@ fun StudentsScreen(
                                             text = student.name,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (student.isFree) Color(0xFF78350F) else DarkText
+                                            color = if (student.isFree) Color(0xFF78350F) else MaterialTheme.colorScheme.onSurface
                                         )
 
                                         if (student.isFree) {
@@ -446,7 +448,7 @@ fun StudentsScreen(
                                     Text(
                                         text = "${student.studentId} • $clsName • ${student.gender}" + if (student.isFree) " • (Fee Exempt)" else "",
                                         fontSize = 11.sp,
-                                        color = if (student.isFree) Color(0xFFB45309) else MutedText,
+                                        color = if (student.isFree) Color(0xFFB45309) else MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = if (student.isFree) FontWeight.SemiBold else FontWeight.Normal
                                     )
                                 }
@@ -589,7 +591,7 @@ fun StudentsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(text = s.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (s.isFree) Color(0xFF78350F) else DarkText)
+                            Text(text = s.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (s.isFree) Color(0xFF78350F) else MaterialTheme.colorScheme.onSurface)
                             if (s.isFree) {
                                 Surface(
                                     color = Color(0xFFD97706),
@@ -648,13 +650,13 @@ fun StudentsScreen(
                     border = if (s.isFree) androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFD97706)) else null
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("💰 Fee & Financial Status", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (s.isFree) Color(0xFFB45309) else DarkText)
+                        Text("💰 Fee & Financial Status", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (s.isFree) Color(0xFFB45309) else MaterialTheme.colorScheme.onSurface)
                         if (s.isFree) {
                             Text("• Fee Status: 🌟 EXEMPT (Lacagta waa laga dhaafay)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
                             Text("• Ardaygan wax lacag ah lagama qaado. Macalin iyo Cashier toona waxba kama beddeli karaan xaaladdiisa Free-ga ah.", fontSize = 11.sp, color = Color(0xFF78350F))
                         } else {
                             Text("• Total Paid Fees: $${String.format("%.0f", totalPaid)}", fontSize = 12.sp, color = PassGreen, fontWeight = FontWeight.SemiBold)
-                            Text("• Pending Invoices: ${pendingFees.size}", fontSize = 12.sp, color = if (pendingFees.isNotEmpty()) FailRed else DarkText)
+                            Text("• Pending Invoices: ${pendingFees.size}", fontSize = 12.sp, color = if (pendingFees.isNotEmpty()) FailRed else MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
@@ -746,7 +748,7 @@ fun StudentsScreen(
                     text = "Tirtir Ardayga (Permanent Deletion)?",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = DarkText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             },
@@ -760,7 +762,7 @@ fun StudentsScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("👤 Magaca: ${s.name}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                            Text("👤 Magaca: ${s.name}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Text("🆔 ID-ga: ${s.studentId}", fontSize = 12.sp, color = TealDark, fontWeight = FontWeight.SemiBold)
                             Text("🏫 Fasalka: $sClassName", fontSize = 12.sp, color = MutedText)
                             if (s.phone.isNotBlank()) {
@@ -815,7 +817,7 @@ fun StudentsScreen(
                     onClick = { studentToDelete = null },
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Jooji (Cancel)", color = DarkText, fontSize = 12.sp)
+                    Text("Jooji (Cancel)", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
                 }
             }
         )
@@ -849,7 +851,7 @@ fun StudentsScreen(
                     text = "Tirtir Dhamaan Ardayda Fasalka?",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = DarkText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             },
@@ -863,7 +865,7 @@ fun StudentsScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("🏫 Fasalka: $className", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkText)
+                            Text("🏫 Fasalka: $className", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Text("👥 Tirada Ardayda la tirtirayo: ${filteredStudents.size} Arday", fontSize = 12.sp, color = FailRed, fontWeight = FontWeight.Bold)
                         }
                     }
@@ -913,7 +915,7 @@ fun StudentsScreen(
                     onClick = { showDeleteAllClassStudentsConfirmDialog = false },
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Jooji (Cancel)", color = DarkText, fontSize = 12.sp)
+                    Text("Jooji (Cancel)", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
                 }
             }
         )
@@ -959,6 +961,13 @@ fun StudentsScreen(
             onDismiss = { selectedReportStudent = null },
             onPrint = {
                 onPrintStudentReport(selectedReportStudent!!)
+            },
+            onPrintStudentMonthlyAttendance = { s ->
+                val curM = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
+                onPrintStudentMonthlyAttendance(s, curM)
+            },
+            onPrintStudentTermAttendance = { s ->
+                onPrintStudentTermAttendance(s)
             }
         )
     }
@@ -1359,7 +1368,9 @@ fun StudentComprehensiveReportDialog(
     attendance: List<AttendanceRecord>,
     schoolName: String,
     onDismiss: () -> Unit,
-    onPrint: () -> Unit
+    onPrint: () -> Unit,
+    onPrintStudentMonthlyAttendance: ((Student) -> Unit)? = null,
+    onPrintStudentTermAttendance: ((Student) -> Unit)? = null
 ) {
     val className = remember(classes, student.classId) {
         classes.firstOrNull { it.id == student.classId }?.name ?: "Fasalka N/A"
@@ -1634,6 +1645,39 @@ fun StudentComprehensiveReportDialog(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("Boqolkiiba", fontSize = 10.sp, color = TealDark, fontWeight = FontWeight.Bold)
                                     Text(String.format("%.0f%%", attPercentage), fontSize = 15.sp, fontWeight = FontWeight.Black, color = TealDark)
+                                }
+                            }
+
+                            if (onPrintStudentMonthlyAttendance != null || onPrintStudentTermAttendance != null) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    if (onPrintStudentMonthlyAttendance != null) {
+                                        OutlinedButton(
+                                            onClick = { onPrintStudentMonthlyAttendance(student) },
+                                            modifier = Modifier.weight(1f).height(34.dp),
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(13.dp), tint = TealPrimary)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("📅 Xaadirinta Bisha", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
+                                        }
+                                    }
+                                    if (onPrintStudentTermAttendance != null) {
+                                        OutlinedButton(
+                                            onClick = { onPrintStudentTermAttendance(student) },
+                                            modifier = Modifier.weight(1f).height(34.dp),
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(13.dp), tint = Color(0xFF0284C7))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("🎓 Xaadirinta Teeramka", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0284C7))
+                                        }
+                                    }
                                 }
                             }
                         }

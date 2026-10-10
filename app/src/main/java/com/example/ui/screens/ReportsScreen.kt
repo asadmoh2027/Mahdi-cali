@@ -46,6 +46,7 @@ fun ReportsScreen(
     onPrintFeeReport: () -> Unit,
     onPrintClassReport: (Long) -> Unit,
     onPrintAttendanceReport: (Long, String?) -> Unit,
+    onPrintStudentAttendanceReport: (Student, String, String?) -> Unit = { _, _, _ -> },
     onPrintExamReport: (Long) -> Unit,
     onOpenClearanceClick: () -> Unit = {},
     onBackClick: () -> Unit
@@ -54,6 +55,9 @@ fun ReportsScreen(
     var selectedStudentId by remember(students) { mutableStateOf<Long?>(students.firstOrNull()?.id) }
     var selectedClassReportId by remember { mutableLongStateOf(0L) }
     var selectedAttMonthFilter by remember { mutableStateOf<String?>(null) }
+    var selectedAttStudentId by remember(students) { mutableStateOf<Long?>(students.firstOrNull()?.id) }
+    var selectedAttReportMode by remember { mutableStateOf("MONTH") } // "MONTH" or "TERM"
+    var selectedAttSingleMonth by remember { mutableStateOf<String?>(null) }
     var showFacilityDialog by remember { mutableStateOf(false) }
 
     val totalStudents = students.size
@@ -543,6 +547,124 @@ fun ReportsScreen(
                             fontSize = 10.sp,
                             color = MutedText
                         )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // --- Sub-section: Single Student Attendance Report (Month & Term) ---
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("👤 Warbixinta Xaadirinta ee Ardayga Keliya (Single Student Attendance):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TealDark)
+
+                                val attStudent = students.find { it.id == selectedAttStudentId } ?: students.firstOrNull()
+                                var studentPickerExpanded by remember { mutableStateOf(false) }
+
+                                if (students.isNotEmpty() && attStudent != null) {
+                                    ExposedDropdownMenuBox(
+                                        expanded = studentPickerExpanded,
+                                        onExpandedChange = { studentPickerExpanded = !studentPickerExpanded },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        OutlinedTextField(
+                                            value = "${attStudent.name} (${attStudent.studentId})",
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Dooro Ardayga", fontSize = 11.sp) },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = studentPickerExpanded) },
+                                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = studentPickerExpanded,
+                                            onDismissRequest = { studentPickerExpanded = false }
+                                        ) {
+                                            students.forEach { st ->
+                                                DropdownMenuItem(
+                                                    text = { Text("${st.name} • ${st.studentId}", fontSize = 11.5.sp) },
+                                                    onClick = {
+                                                        selectedAttStudentId = st.id
+                                                        studentPickerExpanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Mode Selector: MONTH vs TERM
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        FilterChip(
+                                            selected = selectedAttReportMode == "MONTH",
+                                            onClick = { selectedAttReportMode = "MONTH" },
+                                            label = { Text("📅 Bisha (Monthly)", fontSize = 11.sp) }
+                                        )
+                                        FilterChip(
+                                            selected = selectedAttReportMode == "TERM",
+                                            onClick = { selectedAttReportMode = "TERM" },
+                                            label = { Text("🎓 Teeramka (Term / Full)", fontSize = 11.sp) }
+                                        )
+                                    }
+
+                                    // If MONTH selected, show month selector
+                                    if (selectedAttReportMode == "MONTH") {
+                                        val currentM = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
+                                        val monthsList = (availableAttMonths + currentM).distinct().sortedDescending()
+                                        var monthMenuOpen by remember { mutableStateOf(false) }
+
+                                        ExposedDropdownMenuBox(
+                                            expanded = monthMenuOpen,
+                                            onExpandedChange = { monthMenuOpen = !monthMenuOpen },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            OutlinedTextField(
+                                                value = "Bisha: ${selectedAttSingleMonth ?: currentM}",
+                                                onValueChange = {},
+                                                readOnly = true,
+                                                label = { Text("Dooro Bisha", fontSize = 11.sp) },
+                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthMenuOpen) },
+                                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                                            )
+                                            ExposedDropdownMenu(
+                                                expanded = monthMenuOpen,
+                                                onDismissRequest = { monthMenuOpen = false }
+                                            ) {
+                                                monthsList.forEach { m ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(m, fontSize = 11.5.sp) },
+                                                        onClick = {
+                                                            selectedAttSingleMonth = m
+                                                            monthMenuOpen = false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            val currentM = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
+                                            onPrintStudentAttendanceReport(
+                                                attStudent,
+                                                selectedAttReportMode,
+                                                if (selectedAttReportMode == "MONTH") (selectedAttSingleMonth ?: currentM) else null
+                                            )
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        val modeDesc = if (selectedAttReportMode == "MONTH") "Bisha" else "Teeramka"
+                                        Text("🖨️ DAABAC XAADIRINTA ARDAYGA ($modeDesc - PDF)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                         OutlinedButton(
                             onClick = { onPrintExamReport(selectedClassReportId) },

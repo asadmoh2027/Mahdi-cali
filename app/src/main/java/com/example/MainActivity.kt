@@ -220,6 +220,12 @@ class MainActivity : ComponentActivity() {
                             onToggleFreeClick = { id, isFree -> viewModel.toggleStudentFree(id, isFree) },
                             schoolName = schoolName,
                             onPrintStudentReport = { student -> viewModel.printSingleStudentReport(this@MainActivity, student) },
+                            onPrintStudentMonthlyAttendance = { student, yearMonth ->
+                                viewModel.printStudentAttendanceReportHtml(this@MainActivity, student, "MONTH", yearMonth)
+                            },
+                            onPrintStudentTermAttendance = { student ->
+                                viewModel.printStudentAttendanceReportHtml(this@MainActivity, student, "TERM", null)
+                            },
                             onBackClick = { navController.popBackStack() }
                         )
                     }
@@ -266,6 +272,12 @@ class MainActivity : ComponentActivity() {
                             },
                             onExportClassLateReportCsv = { classId, yearMonth ->
                                 viewModel.exportClassLateReportCsv(this@MainActivity, classId, yearMonth)
+                            },
+                            onPrintStudentMonthlyAttendance = { student, yearMonth ->
+                                viewModel.printStudentAttendanceReportHtml(this@MainActivity, student, "MONTH", yearMonth)
+                            },
+                            onPrintStudentTermAttendance = { student ->
+                                viewModel.printStudentAttendanceReportHtml(this@MainActivity, student, "TERM", null)
                             },
                             onDeleteAttendanceLog = { classId, date ->
                                 viewModel.deleteAttendanceLog(classId, date)
@@ -386,6 +398,7 @@ class MainActivity : ComponentActivity() {
                             onPrintFeeReport = { viewModel.printFeeReportHtml(context) },
                             onPrintClassReport = { classId -> viewModel.printClassReportHtml(context, classId) },
                             onPrintAttendanceReport = { classId, yearMonth -> viewModel.printAttendanceReportHtml(context, classId, yearMonth) },
+                            onPrintStudentAttendanceReport = { student, mode, month -> viewModel.printStudentAttendanceReportHtml(context, student, mode, month) },
                             onPrintExamReport = { classId -> viewModel.printExamReportHtml(context, classId) },
                             onOpenClearanceClick = { navController.navigate("clearance") },
                             onBackClick = { navController.popBackStack() }
