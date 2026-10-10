@@ -2554,32 +2554,29 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
             val html = StringBuilder()
             html.append("<html><head><style>")
-            html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
-            html.append("@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } }")
-            html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 0; margin: 0; color: #1E293B; background: #FFF; line-height: 1.15; font-size: 8.5px; }")
-            html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
+            html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1E293B; background: #FFF; }")
             html.append(artisticHeaderCss)
-            html.append(".section-title { font-size: 9.5px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 3px solid #006A6B; padding-left: 6px; margin: 5px 0 2px 0; }")
-            html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 4px 6px; font-size: 8.5px; margin-bottom: 4px; }")
-            html.append(".info-item { margin-bottom: 2px; }")
-            html.append(".badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 8px; font-weight: bold; }")
+            html.append(".section-title { font-size: 13px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 4px solid #006A6B; padding-left: 8px; margin: 15px 0 8px 0; }")
+            html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 12px; font-size: 11px; margin-bottom: 15px; }")
+            html.append(".info-item { margin-bottom: 4px; }")
+            html.append(".badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }")
             html.append(".badge-free { background: #FEF3C7; color: #B45309; border: 1px solid #F59E0B; }")
             html.append(".badge-pass { background: #DCFCE7; color: #15803D; }")
             html.append(".badge-fail { background: #FEE2E2; color: #B91C1C; }")
             html.append(".badge-paid { background: #DCFCE7; color: #15803D; }")
             html.append(".badge-due { background: #FEE2E2; color: #B91C1C; }")
-            html.append("table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 8.5px; }")
-            html.append("th { background: #006A6B; color: #FFFFFF; padding: 3px 5px; text-align: left; font-size: 8.5px; font-weight: bold; }")
-            html.append("td { border-bottom: 1px solid #E2E8F0; padding: 2.5px 5px; font-size: 8.5px; color: #334155; }")
+            html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }")
+            html.append("th { background: #006A6B; color: #FFFFFF; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: bold; }")
+            html.append("td { border-bottom: 1px solid #E2E8F0; padding: 8px 10px; font-size: 11px; color: #334155; }")
             html.append("tr:nth-child(even) { background-color: #F8FAFC; }")
-            html.append(".kpi-row { display: flex; gap: 4px; margin: 4px 0; }")
-            html.append(".kpi-card { flex: 1; background: #F1F5F9; border-radius: 4px; padding: 4px; text-align: center; border: 1px solid #CBD5E1; }")
-            html.append(".kpi-val { font-size: 11px; font-weight: 800; color: #006A6B; margin-top: 1px; }")
-            html.append(".kpi-lbl { font-size: 7.5px; font-weight: 700; color: #64748B; text-transform: uppercase; }")
-            html.append(".signatures { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 6px; page-break-inside: avoid; }")
+            html.append(".kpi-row { display: flex; gap: 10px; margin: 15px 0; }")
+            html.append(".kpi-card { flex: 1; background: #F1F5F9; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #CBD5E1; }")
+            html.append(".kpi-val { font-size: 15px; font-weight: 800; color: #006A6B; margin-top: 4px; }")
+            html.append(".kpi-lbl { font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; }")
+            html.append(".signatures { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 15px; page-break-inside: avoid; }")
             html.append(".sig-box { text-align: center; width: 45%; }")
-            html.append(".sig-line { border-top: 1px dashed #64748B; margin-top: 14px; padding-top: 2px; font-size: 8.5px; font-weight: bold; color: #475569; }")
-            html.append("</style></head><body><div class='document-container'>")
+            html.append(".sig-line { border-top: 1px dashed #64748B; margin-top: 25px; padding-top: 4px; font-size: 11px; font-weight: bold; color: #475569; }")
+            html.append("</style></head><body>")
 
             // Top Header with Artistic Logo
             html.append(getArtisticHeaderHtml(
@@ -3259,43 +3256,40 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
-        html.append("@media print { html, body { margin: 0; padding: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } }")
-        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #102A2A; font-size: 8.5px; line-height: 1.15; }")
-        html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #102A2A; }")
 
         // Header
-        html.append(".header-box { text-align: center; border: 1px solid #006A6B; padding: 3px 6px; border-radius: 4px; background: #FAFDFD; margin-bottom: 3px; }")
-        html.append(".gov-title { font-size: 8.5px; font-weight: bold; color: #004D4E; text-transform: uppercase; letter-spacing: 0.5px; }")
-        html.append(".school-title { font-size: 13px; font-weight: 800; color: #006A6B; margin: 1px 0 2px 0; text-transform: uppercase; }")
-        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 9.5px; font-weight: bold; padding: 1.5px 12px; display: inline-block; border-radius: 3px; letter-spacing: 0.5px; }")
+        html.append(".header-box { text-align: center; border: 1px solid #006A6B; padding: 8px 12px; border-radius: 6px; background: #FAFDFD; margin-bottom: 15px; }")
+        html.append(".gov-title { font-size: 11px; font-weight: bold; color: #004D4E; text-transform: uppercase; letter-spacing: 0.5px; }")
+        html.append(".school-title { font-size: 16px; font-weight: 800; color: #006A6B; margin: 4px 0; text-transform: uppercase; }")
+        html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 12px; font-weight: bold; padding: 4px 16px; display: inline-block; border-radius: 4px; letter-spacing: 0.5px; }")
 
         // Section Title
-        html.append(".sec-title { font-size: 8.5px; font-weight: bold; color: #006A6B; margin: 3px 0 1px 0; text-transform: uppercase; border-bottom: 1.5px solid #006A6B; padding-bottom: 1px; }")
+        html.append(".sec-title { font-size: 11px; font-weight: bold; color: #006A6B; margin: 15px 0 6px 0; text-transform: uppercase; border-bottom: 2px solid #006A6B; padding-bottom: 2px; }")
 
         // Profile Table
-        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; border: 1px solid #CBD5E1; }")
-        html.append(".info-table td { padding: 1.5px 5px; border: 1px solid #E2E8F0; font-size: 8.5px; }")
+        html.append(".info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 1px solid #CBD5E1; }")
+        html.append(".info-table td { padding: 6px 10px; border: 1px solid #E2E8F0; font-size: 11px; }")
         html.append(".info-label { font-weight: bold; color: #475569; width: 22%; background: #F8FAFC; }")
         html.append(".info-value { font-weight: bold; color: #0F172A; width: 28%; }")
 
         // Marks Table
-        html.append(".marks-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; border: 1.5px solid #006A6B; font-size: 8.5px; }")
-        html.append(".marks-table th { background: #006A6B; color: white; padding: 2.5px 3px; text-align: center; font-weight: bold; font-size: 8.5px; }")
-        html.append(".marks-table td { border: 1px solid #CBD5E1; padding: 1.5px 3px; text-align: center; font-size: 8.5px; }")
+        html.append(".marks-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 2px solid #006A6B; font-size: 11px; }")
+        html.append(".marks-table th { background: #006A6B; color: white; padding: 8px 6px; text-align: center; font-weight: bold; font-size: 11px; }")
+        html.append(".marks-table td { border: 1px solid #CBD5E1; padding: 6px; text-align: center; font-size: 11px; }")
         html.append(".marks-table td.sub-name { text-align: left; font-weight: bold; color: #1E293B; }")
-        html.append(".marks-table tr.summary-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 1.5px solid #006A6B; padding: 1.5px 3px; }")
+        html.append(".marks-table tr.summary-row td { background: #F0F7F7; font-weight: bold; color: #006A6B; border-top: 2px solid #006A6B; padding: 8px 6px; }")
 
         // Result Boxes
-        html.append(".result-box-pass { background: #E8F5E9; border: 1px solid #2E7D32; border-radius: 3px; padding: 2px 6px; margin-bottom: 2px; color: #1B5E20; line-height: 1.15; }")
-        html.append(".result-box-fail { background: #FFEBEE; border: 1px solid #C62828; border-radius: 3px; padding: 2px 6px; margin-bottom: 2px; color: #B71C1C; line-height: 1.15; }")
-        html.append(".result-head { font-size: 9.5px; font-weight: bold; margin-bottom: 1px; }")
-        html.append(".result-body { font-size: 8px; line-height: 1.15; }")
+        html.append(".result-box-pass { background: #E8F5E9; border: 1px solid #2E7D32; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; color: #1B5E20; }")
+        html.append(".result-box-fail { background: #FFEBEE; border: 1px solid #C62828; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; color: #B71C1C; }")
+        html.append(".result-head { font-size: 13px; font-weight: bold; margin-bottom: 4px; }")
+        html.append(".result-body { font-size: 11px; }")
 
         // Footer
-        html.append(".footer-section { margin-top: 2px; border: 1px solid #CBD5E1; border-radius: 3px; padding: 2.5px 6px; background: #FAFDFD; page-break-inside: avoid; }")
-        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 8.5px; font-weight: bold; }")
-        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 7.5px; color: #64748B; }")
+        html.append(".footer-section { margin-top: 20px; border: 1px solid #CBD5E1; border-radius: 6px; padding: 10px 14px; background: #FAFDFD; page-break-inside: avoid; }")
+        html.append(".sig-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; font-weight: bold; }")
+        html.append(".stamp-row { display: flex; justify-content: space-between; font-size: 11px; color: #64748B; }")
 
         html.append("</style></head><body>")
 
@@ -3417,7 +3411,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         html.append("<div>Serial Code: $serialCodeMSK</div>")
         html.append("</div></div>")
 
-        html.append("</div></body></html>")
+        html.append("</body></html>")
 
         repository.printHtmlReport(context, html.toString(), "Student_Marksheet_${student.studentId}")
     }
