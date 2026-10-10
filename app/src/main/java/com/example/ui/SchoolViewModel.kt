@@ -2475,8 +2475,9 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         val nowDateTime = getCurrentDateTimeStr()
 
         val html = StringBuilder()
-        html.append("<html><head><style>")
-        html.append("body { font-family: sans-serif; padding: 20px; color: #1A1A1A; }")
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 15mm; }")
+        html.append("body { font-family: sans-serif; padding: 15px; color: #1A1A1A; }")
         html.append(".header { text-align: center; border-bottom: 2px solid #0D9488; padding-bottom: 10px; margin-bottom: 20px; }")
         html.append(".title { color: #0D9488; font-size: 24px; font-weight: bold; }")
         html.append(".sub { color: #6B6B6B; font-size: 14px; }")
@@ -2553,12 +2554,13 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
             val nowDateTime = getCurrentDateTimeStr()
 
             val html = StringBuilder()
-            html.append("<html><head><style>")
-            html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1E293B; background: #FFF; }")
+            html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+            html.append("@page { size: A4; margin: 15mm; }")
+            html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; color: #1E293B; background: #FFF; }")
             html.append(artisticHeaderCss)
             html.append(".section-title { font-size: 13px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 4px solid #006A6B; padding-left: 8px; margin: 15px 0 8px 0; }")
-            html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 12px; font-size: 11px; margin-bottom: 15px; }")
-            html.append(".info-item { margin-bottom: 4px; }")
+            html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px; }")
+            html.append(".info-item { background: #FFF; border: 1px solid #CBD5E1; border-radius: 4px; padding: 6px 10px; font-size: 11px; color: #334155; }")
             html.append(".badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }")
             html.append(".badge-free { background: #FEF3C7; color: #B45309; border: 1px solid #F59E0B; }")
             html.append(".badge-pass { background: #DCFCE7; color: #15803D; }")
@@ -2719,8 +2721,9 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         val nowDateTime = getCurrentDateTimeStr()
 
         val html = StringBuilder()
-        html.append("<html><head><style>")
-        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.4; }")
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 15mm; }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; color: #1A1A1A; line-height: 1.4; }")
         html.append(artisticHeaderCss)
         html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; }")
         html.append("th { background: #006A6B; color: white; padding: 8px; text-align: left; font-size: 12px; }")
@@ -2782,8 +2785,9 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         val nowDateTime = getCurrentDateTimeStr()
 
         val html = StringBuilder()
-        html.append("<html><head><style>")
-        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.5; }")
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 15mm; }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; color: #1A1A1A; line-height: 1.5; }")
         html.append(artisticHeaderCss)
         html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }")
         html.append("th { background: #006A6B; color: white; padding: 10px; text-align: left; font-size: 13px; font-weight: bold; }")
@@ -2876,8 +2880,9 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
         val nowDateTime = getCurrentDateTimeStr()
 
         val html = StringBuilder()
-        html.append("<html><head><style>")
-        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1A1A1A; line-height: 1.4; }")
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 15mm; }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; color: #1A1A1A; line-height: 1.4; }")
         html.append(artisticHeaderCss)
         html.append("table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }")
         html.append("th { background: #006A6B; color: white; padding: 8px; text-align: left; font-size: 12px; }")
@@ -2927,9 +2932,9 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4; margin: 10mm; }")
-        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 5px; color: #102A2A; font-size: 12px; }")
-        html.append(".document-container { border: 2px solid #006A6B; padding: 12px; border-radius: 6px; box-sizing: border-box; }")
+        html.append("@page { size: A4; margin: 15mm; }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 15px; color: #102A2A; font-size: 12px; }")
+        html.append(".document-container { border: 2px solid #006A6B; padding: 15px; border-radius: 6px; box-sizing: border-box; }")
 
         // Header Style
         html.append(".header-box { text-align: center; border: 1.5px solid #006A6B; padding: 8px; border-radius: 4px; background: #FAFDFD; margin-bottom: 10px; }")
@@ -3256,7 +3261,8 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #102A2A; }")
+        html.append("@page { size: A4; margin: 15mm; }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; color: #102A2A; }")
 
         // Header
         html.append(".header-box { text-align: center; border: 1px solid #006A6B; padding: 8px 12px; border-radius: 6px; background: #FAFDFD; margin-bottom: 15px; }")
@@ -3446,7 +3452,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
+        html.append("@page { size: A4 portrait; margin: 18mm 12mm 15mm 12mm; }")
         html.append("@media print { html, body { margin: 0; padding: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } .page-break { page-break-after: always; break-after: page; } }")
         html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #102A2A; font-size: 8.5px; line-height: 1.15; }")
         html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
@@ -3657,10 +3663,10 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4; margin: 10mm; }")
+        html.append("@page { size: A4; margin: 15mm; }")
         html.append("@media print { .page-break { page-break-after: always; break-after: page; } }")
-        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 5px; color: #102A2A; font-size: 12px; }")
-        html.append(".document-container { border: 2px solid #006A6B; padding: 12px; border-radius: 6px; box-sizing: border-box; }")
+        html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 15px; color: #102A2A; font-size: 12px; }")
+        html.append(".document-container { border: 2px solid #006A6B; padding: 15px; border-radius: 6px; box-sizing: border-box; }")
         html.append(".header-box { text-align: center; border: 1.5px solid #006A6B; padding: 8px; border-radius: 4px; background: #FAFDFD; margin-bottom: 10px; }")
         html.append(".school-title { font-size: 16px; font-weight: 800; color: #006A6B; margin: 3px 0 6px 0; text-transform: uppercase; }")
         html.append(".doc-banner { background: #006A6B; color: #FFFFFF; font-size: 14px; font-weight: bold; padding: 4px 18px; display: inline-block; border-radius: 4px; letter-spacing: 1px; }")
@@ -3841,13 +3847,13 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4; margin: 12mm; }")
+        html.append("@page { size: A4; margin: 15mm; }")
         html.append("@media print { .page-break { page-break-after: always; break-after: page; } }")
-        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1E293B; background: #FFF; line-height: 1.5; }")
+        html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; color: #1E293B; background: #FFF; line-height: 1.5; }")
         html.append(artisticHeaderCss)
         html.append(".section-title { font-size: 13px; font-weight: 800; color: #006A6B; text-transform: uppercase; border-left: 4px solid #006A6B; padding-left: 8px; margin: 18px 0 8px 0; }")
-        html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px; }")
-        html.append(".info-item { margin-bottom: 4px; }")
+        html.append(".info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }")
+        html.append(".info-item { background: #FFF; border: 1px solid #CBD5E1; border-radius: 4px; padding: 6px 10px; font-size: 11px; color: #334155; }")
         html.append(".badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }")
         html.append(".badge-free { background: #FEF3C7; color: #B45309; border: 1px solid #F59E0B; }")
         html.append(".badge-pass { background: #DCFCE7; color: #15803D; }")
@@ -4010,6 +4016,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+        html.append("@page { size: A4; margin: 18mm 12mm 15mm 12mm; }")
         html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #111; font-size: 11px; line-height: 1.4; }")
         html.append(artisticHeaderCss)
         html.append("table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 18px; text-align: left; }")
@@ -4115,7 +4122,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4 portrait; margin: 3mm 4mm; }")
+        html.append("@page { size: A4 portrait; margin: 18mm 12mm 15mm 12mm; }")
         html.append("@media print { html, body { margin: 0; padding: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .document-container { page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; box-sizing: border-box; overflow: hidden; } }")
         html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #102A2A; font-size: 8.5px; line-height: 1.15; }")
         html.append(".document-container { border: 1.5px solid #006A6B; padding: 4px 6px; border-radius: 4px; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; max-height: 288mm; overflow: hidden; }")
@@ -4270,6 +4277,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
             val html = StringBuilder()
             html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
+            html.append("@page { size: A4; margin: 18mm 12mm 15mm 12mm; }")
             html.append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 15px; color: #111; }")
             html.append(".header-box { text-align: center; font-weight: bold; margin-bottom: 12px; }")
             html.append(".title-main { font-size: 18px; color: #0D47A1; margin-bottom: 2px; text-transform: uppercase; }")
@@ -4447,7 +4455,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: landscape; margin: 10mm; }")
+        html.append("@page { size: landscape; margin: 18mm 12mm 15mm 12mm; }")
         html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; color: #111; font-size: 11px; }")
         html.append(".header { text-align: center; border-bottom: 2px solid #006A6B; padding-bottom: 8px; margin-bottom: 12px; }")
         html.append(".school-title { font-size: 18px; font-weight: 800; color: #006A6B; text-transform: uppercase; margin: 0; }")
@@ -4618,7 +4626,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4 portrait; margin: 12mm; }")
+        html.append("@page { size: A4 portrait; margin: 18mm 12mm 15mm 12mm; }")
         html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1A202C; margin: 0; padding: 14px; font-size: 12px; }")
         html.append(".header-box { border: 2px solid #006A6B; border-radius: 8px; padding: 14px; background: #F7FAFC; margin-bottom: 16px; }")
         html.append(".top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #006A6B; padding-bottom: 8px; }")
@@ -4764,7 +4772,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4 portrait; margin: 10mm; }")
+        html.append("@page { size: A4 portrait; margin: 18mm 12mm 15mm 12mm; }")
         html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1A202C; margin: 0; padding: 12px; font-size: 11px; }")
         html.append(".header-box { border: 2px solid #006A6B; border-radius: 8px; padding: 12px; background: #F7FAFC; margin-bottom: 12px; }")
         html.append(".top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #006A6B; padding-bottom: 6px; }")
@@ -4968,7 +4976,7 @@ Hassan Barre Roble,Male,Hawa Noor,0635001122"""
 
         val html = StringBuilder()
         html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>")
-        html.append("@page { size: A4 portrait; margin: 10mm; }")
+        html.append("@page { size: A4 portrait; margin: 18mm 12mm 15mm 12mm; }")
         html.append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 12px; color: #1A202C; font-size: 12px; }")
         html.append(".header-box { border: 2px solid #006A6B; border-radius: 8px; padding: 12px; margin-bottom: 14px; background: #F7FAFC; }")
         html.append(".top-logo-bar { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #006A6B; padding-bottom: 8px; }")

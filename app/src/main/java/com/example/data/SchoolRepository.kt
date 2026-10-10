@@ -13,6 +13,7 @@ import android.print.PrintManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import android.view.View
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -867,6 +868,7 @@ class SchoolRepository(private val db: SchoolDatabase) {
                 }
 
                 val webView = WebView(targetContext)
+                webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 activeWebViews.add(webView)
 
                 // Configure WebView settings for reliable rendering
